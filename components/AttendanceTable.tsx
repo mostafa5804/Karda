@@ -152,12 +152,13 @@ const AttendanceTable: React.FC = () => {
                  return { title: "تایید بازیابی", confirmText: "بازیابی", confirmClassName: "btn-success", children: <p>آیا از بازیابی کارمند <strong className="px-1">{employee.firstName} {employee.lastName}</strong> اطمینان دارید؟</p> };
             case 'delete':
                  return { title: "تایید حذف دائمی", confirmText: "حذف دائمی", confirmClassName: "btn-error", children: <p>آیا از حذف دائمی کارمند <strong className="px-1">{employee.firstName} {employee.lastName}</strong> اطمینان دارید؟ <strong className="text-red-600">این عمل غیرقابل بازگشت است و تمام سوابق او برای همیشه پاک می‌شود.</strong></p> };
-            // FIX: Using an exhaustive check in the default case helps TypeScript correctly infer the return type of the function, preventing errors where properties of the returned object are typed as `unknown`.
-            default:
+            // FIX: Using an exhaustive check in the default case helps TypeScript correctly infer the return type of the function. Throwing an error for an unreachable case is more type-safe than returning null.
+            default: {
                 // This should be unreachable if 'ActionType' is correct,
                 // but it helps guarantee type safety.
                 const exhaustiveCheck: never = type;
-                return null;
+                throw new Error("Unhandled action type.");
+            }
         }
     }
     const modalDetails = getModalDetails();
@@ -276,7 +277,7 @@ const AttendanceTable: React.FC = () => {
                                         
                                         const finalBgClass = cellColorClass !== 'bg-transparent' ? cellColorClass : columnBg;
 
-                                        return (<td key={date} className="border border-gray-300 text-center p-0">
+                                        return <td key={date} className="border border-gray-300 text-center p-0">
                                             <input type="text" value={value} 
                                                 onChange={(e) => handleAttendanceChange(employee.id, day, e.target.value)} 
                                                 onKeyDown={(e) => handleKeyDown(e, rowIndex, i)}
@@ -284,7 +285,7 @@ const AttendanceTable: React.FC = () => {
                                                 data-col={i}
                                                 className={`w-full h-full text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10 relative ${finalBgClass}`}
                                                 disabled={employee.isArchived} />
-                                        </td>)
+                                        </td>
                                     })}
                                     <td className={`sticky left-0 p-2 border border-gray-300 text-center font-bold z-10 ${employee.isArchived ? 'bg-gray-100' : 'bg-white'}`}>{totalHours}</td>
                                 </tr>
@@ -304,7 +305,7 @@ const AttendanceTable: React.FC = () => {
             >
                 {modalDetails.children}
             </ConfirmationModal>}
-        </>
+        </div>
     );
 };
 
