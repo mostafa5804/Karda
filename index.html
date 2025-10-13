@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>سامانه مدیریت کارکرد پرسنل</title>
+    
+    <!-- Tailwind & DaisyUI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+
+    <!-- Vazirmatn Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+      body {
+        font-family: 'Vazirmatn', sans-serif;
+      }
+      /* Custom scrollbar for better aesthetics */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      @media print {
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+        }
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body * {
+          visibility: hidden;
+        }
+        .print-area, .print-area * {
+          visibility: visible;
+        }
+        .print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          font-size: 10pt;
+        }
+        .no-print {
+            display: none !important;
+        }
+         .print-area table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+        }
+        .print-area th, .print-area td {
+            border: 1px solid #333;
+            padding: 4px;
+            text-align: center;
+        }
+        .print-area h1, .print-area h2, .print-area p {
+            text-align: center;
+        }
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "zustand/": "https://aistudiocdn.com/zustand@^5.0.8/",
+    "zustand": "https://aistudiocdn.com/zustand@^5.0.8",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "xlsx": "https://aistudiocdn.com/xlsx@^0.18.5",
+    "chart.js": "https://aistudiocdn.com/chart.js@^4.5.1"
+  }
+}
+</script>
+</head>
+<body data-theme="light">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
