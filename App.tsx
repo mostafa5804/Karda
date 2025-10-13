@@ -18,6 +18,21 @@ const App: React.FC = () => {
         document.documentElement.setAttribute('data-theme', theme);
     }, [theme]);
 
+    // Register Service Worker for offline capabilities
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    }, []);
+
 
     const renderView = () => {
         switch (view) {

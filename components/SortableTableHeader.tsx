@@ -9,13 +9,13 @@ interface SortableTableHeaderProps<T> {
     className?: string;
 }
 
-const SortableTableHeader = <T extends object>({
+function SortableTableHeader<T extends object>({
     sortKey,
     sortConfig,
     requestSort,
     children,
     className
-}: SortableTableHeaderProps<T>) => {
+}: SortableTableHeaderProps<T>) {
     
     const getSortIcon = (direction: SortDirection) => {
         if (!direction) return '↕';

@@ -96,7 +96,12 @@ const AttendanceTable: React.FC = () => {
             }
 
             headers.push(
-                <th key={i} className={`p-1 border border-gray-300 text-center sticky top-0 z-10 ${cellClass} min-w-[50px] cursor-pointer`} onContextMenu={(e) => handleDayHeaderClick(e, day)}>
+                <th 
+                    key={i} 
+                    className={`p-1 border border-gray-300 text-center sticky top-0 z-10 ${cellClass} min-w-[50px] cursor-pointer`} 
+                    onContextMenu={(e) => handleDayHeaderClick(e, day)}
+                    title="برای تغییر وضعیت روز، کلیک-راست کنید"
+                >
                     <div className="font-normal text-sm">{JALALI_DAYS_OF_WEEK[dayOfWeek]}</div>
                     <div className="font-bold text-lg">{day}</div>
                 </th>

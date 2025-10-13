@@ -52,7 +52,6 @@ const PersonnelPage: React.FC = () => {
         );
     }, [employees, showArchived, searchQuery]);
 
-    // FIX: Explicitly provide the generic type to useSortableTable to prevent incorrect type inference.
     const { items: sortedEmployees, requestSort, sortConfig } = useSortableTable<Employee>(filteredEmployees, { key: 'lastName', direction: 'asc' });
 
     const handleOpenDetailsModal = (employee?: Employee) => {
@@ -189,12 +188,18 @@ const PersonnelPage: React.FC = () => {
                     <thead className="bg-base-200 text-base-content/80">
                         <tr>
                             <th className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" onChange={e => handleSelectAll(e.target.checked)} checked={sortedEmployees.length > 0 && selectedIds.size === sortedEmployees.length}/></th>
-                            <SortableTableHeader<Employee> sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className="p-3">حقوق ماهانه</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className="p-3">پایان قرارداد</SortableTableHeader>
+                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
+                            <SortableTableHeader sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
+                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
+                            <SortableTableHeader sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
+                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
+                            <SortableTableHeader sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
+                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
+                            <SortableTableHeader sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
+                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
+                            <SortableTableHeader sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className="p-3">حقوق ماهانه</SortableTableHeader>
+                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
+                            <SortableTableHeader sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className="p-3">پایان قرارداد</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
                     </thead>

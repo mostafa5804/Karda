@@ -180,7 +180,7 @@ const Dashboard: React.FC = () => {
             <div>
                 <h2 className="text-xl font-bold text-base-content/80 mb-4">
                     خلاصه وضعیت امروز
-                    <span className="text-sm font-normal text-base-content/60 mr-2">({`${todayD} ${JALALI_MONTHS[todayM - 1]}`})</span>
+                    <span className="text-sm font-normal text-base-content/60 mr-2">({`${todayD} ${JALALI_MONTHS[todayM - 1]} ${todayY}`})</span>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard title="حاضر" value={dailyStats.present} icon={ICONS.present} colorClass="bg-green-100" />

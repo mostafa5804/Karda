@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { JALALI_MONTHS } from '../constants';
 
 interface NoteEditorModalProps {
     isOpen: boolean;
@@ -9,13 +10,26 @@ interface NoteEditorModalProps {
     date: string;
 }
 
+const getFormattedJalaliDate = (dateString: string): string => {
+    if (!dateString) return '';
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return dateString;
+    const [year, month, day] = parts;
+    const monthIndex = parseInt(month, 10) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) {
+        return `${parseInt(day, 10)} ${JALALI_MONTHS[monthIndex]} ${year}`;
+    }
+    return dateString;
+};
+
+
 const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ isOpen, onClose, onSave, initialNote = '', employeeName, date }) => {
     const [note, setNote] = useState(initialNote);
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     useEffect(() => {
         setNote(initialNote);
-    }, [initialNote]);
+    }, [initialNote, isOpen]);
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -37,12 +51,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ isOpen, onClose, onSa
         }
     };
     
-    // Convert YYYY-MM-DD to a more readable format for the title
-    const formattedDate = new Date(date.replace(/-/g, '/')).toLocaleDateString('fa-IR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+    const formattedDate = getFormattedJalaliDate(date);
 
     return (
         <dialog ref={dialogRef} className="modal" onCancel={onClose}>
