@@ -1,36 +1,26 @@
-// This file defines all the shared TypeScript types used across the application.
-
 export type View = 'dashboard' | 'attendance' | 'reports' | 'settings';
 export type ReportView = 'salary' | 'attendanceSummary' | 'attendanceList' | 'individual';
 
 export interface Employee {
     id: string;
     firstName: string;
-    lastName:string;
+    lastName: string;
     position: string;
     monthlySalary: number;
     isArchived: boolean;
 }
 
 export interface Attendance {
-    [date: string]: string; // e.g., "1403-05-01": "10" or "غ"
+    [date: string]: string; // date is 'YYYY-MM-DD'
 }
 
 export interface EmployeeAttendance {
     [employeeId: string]: Attendance;
 }
 
-export interface ParsedExcelRow {
-    lastName: string;
-    firstName: string;
-    position: string;
-    monthlySalary: number;
-    attendance: Attendance;
-}
-
 export interface Settings {
     baseDayCount: number;
-    holidays: string[]; // dates like "1403-05-01"
+    holidays: string[];
     dayTypeOverrides: {
         [date: string]: 'normal' | 'friday' | 'holiday';
     };
@@ -45,6 +35,44 @@ export interface CompanyInfo {
     companyName: string;
     projects: Project[];
     companyLogo: string;
+}
+
+export interface ParsedExcelRow {
+    lastName: string;
+    firstName: string;
+    position: string;
+    monthlySalary: number;
+    attendance: Attendance;
+}
+
+export interface MonthlyFinancials {
+    advance?: number;
+    bonus?: number;
+    deduction?: number;
+}
+
+export interface FinancialData {
+    [employeeId: string]: {
+        [year: number]: {
+            [month: number]: MonthlyFinancials;
+        };
+    };
+}
+
+export interface ReportData {
+    employeeId: string;
+    employeeName: string;
+    monthlySalary: number;
+    effectiveDays: number;
+    absentDays: number;
+    leaveDays: number;
+    overtimeHours: number;
+    totalPayableDays: number;
+    totalPay: number;
+    dailyRate: number;
+    advance: number;
+    bonus: number;
+    deduction: number;
 }
 
 export interface AttendanceSummaryData {
@@ -64,48 +92,42 @@ export interface AttendanceSummaryData {
     notes: string;
 }
 
-export interface MonthlyFinancials {
-    advance?: number;
-    bonus?: number;
-    deduction?: number;
-}
+// --- New and Updated Dashboard Types ---
 
-export interface FinancialData {
-    [employeeId: string]: {
-        [year: number]: {
-            [month: number]: MonthlyFinancials;
-        }
-    }
-}
-
-// --- New Dashboard Types ---
+export type DashboardDateFilter = {
+    mode: 'all' | 'month';
+    year?: number;
+    month?: number;
+};
 
 export interface DailyStats {
-    totalActive: number;
+    total: number;
     present: number;
     onLeave: number;
     absent: number;
 }
 
-export interface OverallStats {
+export interface ProjectWideStats {
     totalSalaryPaid: number;
     totalWorkDays: number;
     totalOvertimeHours: number;
 }
 
-export interface EmployeeTrendDataPoint {
-    label: string; // e.g., "مهر 1403"
-    count: number;
+export interface SalaryDistributionData {
+    labels: string[];
+    data: number[];
 }
 
-export interface SalaryDistributionDataItem {
-    employeeName: string;
-    totalPay: number;
+export interface EmployeeTrendData {
+    labels: string[]; // e.g., "1402-01", "1402-02"
+    data: number[];
 }
 
-export interface FullDashboardData {
-    dailyStats: DailyStats;
-    overallStats: OverallStats;
-    employeeTrend: EmployeeTrendDataPoint[];
-    salaryDistribution: SalaryDistributionDataItem[];
+
+export interface MonthlyDashboardStats {
+    totalEmployees: number;
+    activeEmployees: number;
+    totalPayForMonth: number;
+    totalOvertimeHours: number;
+    totalAbsences: number;
 }
