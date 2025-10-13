@@ -9,6 +9,7 @@ import PersonnelPage from './components/PersonnelPage'; // Import new component
 import { useAppStore } from './stores/useAppStore';
 import ToastContainer from './components/ToastContainer';
 import { useThemeStore } from './stores/useThemeStore';
+import Footer from './components/Footer';
 
 const App: React.FC = () => {
     const { view } = useAppStore();
@@ -59,6 +60,7 @@ const App: React.FC = () => {
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-base-100 p-4 md:p-6">
                     {renderView()}
                 </main>
+                <Footer />
             </div>
             <ToastContainer />
         </div>
