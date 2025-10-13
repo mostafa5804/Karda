@@ -89,12 +89,14 @@ export const calculateAllDashboardData = (
     const allMonthReports: { [key: string]: ReportData[] } = {};
     allMonths.forEach(({year, month}) => {
          const key = `${year}-${month}`;
-         allMonthReports[key] = generateReport(activeEmployees, attendance, settings, financialData, year, month);
+         // FIX: Pass 'from' and 'to' objects to generateReport as required by its signature.
+         allMonthReports[key] = generateReport(activeEmployees, attendance, settings, financialData, { year, month }, { year, month });
     });
 
     if (filter.mode === 'month' && filter.year && filter.month) {
         const key = `${filter.year}-${filter.month}`;
-        monthlyReportData = allMonthReports[key] || generateReport(activeEmployees, attendance, settings, financialData, filter.year, filter.month);
+        // FIX: Pass 'from' and 'to' objects to generateReport as required by its signature.
+        monthlyReportData = allMonthReports[key] || generateReport(activeEmployees, attendance, settings, financialData, { year: filter.year, month: filter.month }, { year: filter.year, month: filter.month });
 
         const totalPayForMonth = monthlyReportData.reduce((sum, item) => sum + item.totalPay, 0);
         const totalOvertimeHours = monthlyReportData.reduce((sum, item) => sum + item.overtimeHours, 0);

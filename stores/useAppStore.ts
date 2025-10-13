@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getCurrentJalaliDate } from '../utils/calendar';
-import { View, ReportView, DashboardDateFilter } from '../types';
+import { View, ReportView, DashboardDateFilter, ReportDateFilter } from '../types';
 
 interface AppState {
     view: View;
@@ -27,6 +27,9 @@ interface AppState {
 
     dashboardDateFilter: DashboardDateFilter;
     setDashboardDateFilter: (filter: DashboardDateFilter) => void;
+
+    reportDateFilter: ReportDateFilter;
+    setReportDateFilter: (filter: ReportDateFilter) => void;
 }
 
 const [currentYear, currentMonth] = getCurrentJalaliDate();
@@ -71,6 +74,13 @@ export const useAppStore = create(
 
             dashboardDateFilter: { mode: 'all' },
             setDashboardDateFilter: (filter) => set({ dashboardDateFilter: filter }),
+
+            reportDateFilter: {
+                mode: 'month',
+                from: { year: currentYear, month: currentMonth },
+                to: { year: currentYear, month: currentMonth },
+            },
+            setReportDateFilter: (filter) => set({ reportDateFilter: filter }),
         }),
         {
             name: 'app-storage-v2', // version bump to avoid conflicts

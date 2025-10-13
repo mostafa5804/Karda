@@ -13,40 +13,49 @@ interface AttendanceSummaryReportProps {
 }
 
 const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ employees, attendance, settings, projectId }) => {
-    const { selectedYear, selectedMonth } = useAppStore();
+    const { reportDateFilter } = useAppStore();
     const { projects } = useCompanyStore();
 
     const currentProject = projects.find(p => p.id === projectId);
 
     const data = useMemo(() => {
-        return generateAttendanceSummary(employees, attendance, settings, selectedYear, selectedMonth);
-    }, [employees, attendance, settings, selectedYear, selectedMonth]);
+        return generateAttendanceSummary(employees, attendance, settings, reportDateFilter.from, reportDateFilter.to);
+    }, [employees, attendance, settings, reportDateFilter]);
 
     const handlePrint = () => {
         window.print();
     };
     
-    const ReportHeader = () => (
-        <div className="mb-4">
-            <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
-                <div className="w-1/4 flex justify-center">
-                    {/* Placeholder for the right logo from the image */}
+    const ReportHeader = () => {
+        const { mode, from, to } = reportDateFilter;
+        let dateString;
+        if (mode === 'month') {
+            dateString = `ماه: ${JALALI_MONTHS[from.month - 1]} سال: ${from.year}`;
+        } else {
+             dateString = `از ${JALALI_MONTHS[from.month - 1]} ${from.year} تا ${JALALI_MONTHS[to.month - 1]} ${to.year}`;
+        }
+
+        return (
+            <div className="mb-4">
+                <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
+                    <div className="w-1/4 flex justify-center">
+                        {/* Placeholder for the right logo from the image */}
+                    </div>
+                    <div className="w-1/2 text-center">
+                        <h1 className="text-xl font-bold">{currentProject?.companyName}</h1>
+                        <h2 className="text-lg">لیست کارکرد پرسنل</h2>
+                        <p>گزارش کار پروژه: {currentProject?.name}</p>
+                    </div>
+                    <div className="w-1/4 flex justify-center">
+                        {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                    </div>
                 </div>
-                <div className="w-1/2 text-center">
-                    <h1 className="text-xl font-bold">{currentProject?.companyName}</h1>
-                    <h2 className="text-lg">لیست حقوق پرسنل</h2>
-                    <p>گزارش کار پروژه: {currentProject?.name}</p>
-                </div>
-                <div className="w-1/4 flex justify-center">
-                    {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                <div className="text-center font-semibold">
+                    {dateString}
                 </div>
             </div>
-            <div className="flex justify-between items-center">
-                <div>ماه: {JALALI_MONTHS[selectedMonth - 1]}</div>
-                <div>سال: {selectedYear}</div>
-            </div>
-        </div>
-    );
+        );
+    };
 
     const ReportFooter = () => (
          <div className="mt-8 pt-4 text-center text-sm">
@@ -57,13 +66,22 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
             </div>
         </div>
     );
+    
+    const reportTitle = useMemo(() => {
+        const { mode, from, to } = reportDateFilter;
+        if (mode === 'month') {
+            return `گزارش کارکرد کلی`;
+        }
+        return `گزارش کارکرد کلی (تجمیعی)`;
+    }, [reportDateFilter]);
+
 
     return (
         <div className="bg-white p-6 rounded-lg shadow">
              <div className="flex justify-between items-center mb-4 no-print">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">
-                        گزارش کارکرد کلی
+                        {reportTitle}
                     </h1>
                     <p className="text-gray-600">
                         این گزارش برای چاپ در صفحه A4 عمودی بهینه شده است.
@@ -124,7 +142,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
                 </div>
              ) : (
                 <div className="text-center p-6 text-gray-500">
-                    هیچ اطلاعاتی برای نمایش در این ماه وجود ندارد.
+                    هیچ اطلاعاتی برای نمایش در این بازه زمانی وجود ندارد.
                 </div>
             )}
         </div>

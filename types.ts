@@ -165,3 +165,11 @@ export interface Document {
     data: string; // Base64 encoded file data
     uploadedAt: string; // ISO string date
 }
+
+export type ReportDateFilterMode = 'month' | 'range';
+
+export interface ReportDateFilter {
+    mode: ReportDateFilterMode;
+    from: { year: number; month: number };
+    to: { year: number; month: number };
+}

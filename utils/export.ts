@@ -1,4 +1,4 @@
-import { ReportData } from "./reports";
+import { ReportData } from "../types";
 import { Project } from "../types";
 import { JALALI_MONTHS } from "../constants";
 
@@ -6,8 +6,8 @@ export const exportReportToCSV = (
     reportData: ReportData[],
     projects: Project[],
     currentProjectId: string | null,
-    year: number,
-    month: number
+    from: { year: number; month: number },
+    to: { year: number; month: number }
 ) => {
     const headers = [
         'نام کارمند',
@@ -42,7 +42,15 @@ export const exportReportToCSV = (
     link.setAttribute("href", encodedUri);
     const currentProject = projects.find(p => p.id === currentProjectId);
     const projectName = currentProject ? currentProject.name : 'پروژه';
-    const fileName = `گزارش-حقوق-${projectName}-${JALALI_MONTHS[month - 1]}-${year}.csv`;
+    
+    let datePart;
+    if (from.year === to.year && from.month === to.month) {
+        datePart = `${JALALI_MONTHS[from.month - 1]}-${from.year}`;
+    } else {
+        datePart = `از-${JALALI_MONTHS[from.month - 1]}-${from.year}-تا-${JALALI_MONTHS[to.month - 1]}-${to.year}`;
+    }
+
+    const fileName = `گزارش-حقوق-${projectName}-${datePart}.csv`;
     link.setAttribute("download", fileName);
     document.body.appendChild(link);
     

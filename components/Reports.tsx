@@ -11,9 +11,45 @@ import { JALALI_MONTHS, ICONS } from '../constants';
 import AttendanceSummaryReport from './AttendanceSummaryReport';
 import AttendanceListReport from './AttendanceListReport';
 import IndividualReport from './IndividualReport';
+import { ReportDateFilter } from '../types';
+
+const currentJalaliYear = new Date().toLocaleDateString('fa-IR-u-nu-latn').split('/')[0];
+const years = Array.from({ length: 10 }, (_, i) => parseInt(currentJalaliYear) - i);
+
+const DateSelector: React.FC<{
+    date: { year: number, month: number },
+    onDateChange: (newDate: { year: number, month: number }) => void,
+    label?: string
+}> = ({ date, onDateChange, label }) => (
+    <div className="join">
+        {label && <span className="join-item btn btn-disabled btn-sm">{label}</span>}
+        <select
+            value={date.year}
+            onChange={(e) => onDateChange({ ...date, year: Number(e.target.value) })}
+            className="select select-bordered select-sm join-item"
+        >
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select
+            value={date.month}
+            onChange={(e) => onDateChange({ ...date, month: Number(e.target.value) })}
+            className="select select-bordered select-sm join-item"
+        >
+            {JALALI_MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+        </select>
+    </div>
+);
 
 const Reports: React.FC = () => {
-    const { currentProjectId, selectedYear, selectedMonth, reportView, setReportView, selectedEmployeeIdForReport, setSelectedEmployeeIdForReport, setView } = useAppStore();
+    const { 
+        currentProjectId, 
+        reportView, setReportView, 
+        selectedEmployeeIdForReport, setSelectedEmployeeIdForReport, 
+        setView, 
+        reportDateFilter, setReportDateFilter,
+        setSelectedDate
+    } = useAppStore();
+    
     const { getProjectData } = useEmployeeStore();
     const { getSettings } = useSettingsStore();
     const { projects } = useCompanyStore();
@@ -31,6 +67,7 @@ const Reports: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
+    const [localFilter, setLocalFilter] = useState<ReportDateFilter>(reportDateFilter);
 
     const filteredEmployees = useMemo(() => {
         if (!searchQuery) return [];
@@ -52,17 +89,20 @@ const Reports: React.FC = () => {
 
     const salaryReportData = useMemo(() => {
         if (activeEmployees.length === 0) return [];
-        return generateReport(activeEmployees, attendance, settings, financialData, selectedYear, selectedMonth);
-    }, [activeEmployees, attendance, settings, financialData, selectedYear, selectedMonth]);
+        return generateReport(activeEmployees, attendance, settings, financialData, reportDateFilter.from, reportDateFilter.to);
+    }, [activeEmployees, attendance, settings, financialData, reportDateFilter]);
     
     const handleExport = () => {
-        exportReportToCSV(salaryReportData, projects, projectId, selectedYear, selectedMonth);
+        exportReportToCSV(salaryReportData, projects, projectId, reportDateFilter.from, reportDateFilter.to);
     };
 
     const handleViewIndividualReport = (employeeId: string) => {
         setView('reports');
         setReportView('individual');
         setSelectedEmployeeIdForReport(employeeId);
+        // The individual report component uses selectedYear/Month.
+        // Set them to the last month of the range for context.
+        setSelectedDate(reportDateFilter.to.year, reportDateFilter.to.month);
     };
     
     const totalPayAllEmployees = salaryReportData.reduce((sum, item) => sum + item.totalPay, 0);
@@ -70,6 +110,27 @@ const Reports: React.FC = () => {
     const selectedEmployee = useMemo(() => {
         return activeEmployees.find(emp => emp.id === selectedEmployeeIdForReport);
     }, [activeEmployees, selectedEmployeeIdForReport]);
+
+    const handleApplyFilter = () => {
+        if (localFilter.mode === 'month') {
+             setReportDateFilter({ ...localFilter, to: localFilter.from });
+        } else {
+            // Ensure from is before to
+            if (localFilter.from.year > localFilter.to.year || (localFilter.from.year === localFilter.to.year && localFilter.from.month > localFilter.to.month)) {
+                setReportDateFilter({ ...localFilter, to: localFilter.from, from: localFilter.to });
+            } else {
+                 setReportDateFilter(localFilter);
+            }
+        }
+    };
+    
+    const reportTitle = useMemo(() => {
+        const { mode, from, to } = reportDateFilter;
+        if (mode === 'month') {
+            return `${JALALI_MONTHS[from.month - 1]} ${from.year}`;
+        }
+        return `از ${JALALI_MONTHS[from.month - 1]} ${from.year} تا ${JALALI_MONTHS[to.month - 1]} ${to.year}`;
+    }, [reportDateFilter]);
 
     if (!currentProjectId) {
          return <div className="text-center p-8 bg-white rounded-lg shadow">لطفاً ابتدا یک پروژه را از منوی بالا انتخاب کنید یا در صفحه تنظیمات یک پروژه جدید بسازید.</div>
@@ -80,9 +141,9 @@ const Reports: React.FC = () => {
             case 'salary':
                 return (
                     <div className="bg-white p-6 rounded-lg shadow">
-                        <div className="flex justify-between items-center mb-4">
+                        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-800">گزارش مبلغ حقوق - {JALALI_MONTHS[selectedMonth - 1]} {selectedYear}</h1>
+                                <h1 className="text-2xl font-bold text-gray-800">گزارش مبلغ حقوق - {reportTitle}</h1>
                                 <p className="text-gray-600">{currentProject?.companyName} - {currentProject?.name}</p>
                             </div>
                             <button onClick={handleExport} className="btn btn-success no-print" disabled={salaryReportData.length === 0}>خروجی CSV</button>
@@ -93,11 +154,10 @@ const Reports: React.FC = () => {
                                     <tr>
                                         <th className="p-3 font-semibold">#</th>
                                         <th className="p-3 font-semibold text-right">نام کارمند</th>
-                                        <th className="p-3 font-semibold">حقوق پایه</th>
                                         <th className="p-3 font-semibold">روزهای موثر</th>
                                         <th className="p-3 font-semibold">مرخصی</th>
                                         <th className="p-3 font-semibold">استعلاجی</th>
-                                        <th className="p-3 font-semibold">اضافه کاری</th>
+                                        <th className="p-3 font-semibold">اضافه کاری (ساعت)</th>
                                         <th className="p-3 font-semibold">مساعده</th>
                                         <th className="p-3 font-semibold">پاداش</th>
                                         <th className="p-3 font-semibold">کسورات</th>
@@ -113,7 +173,6 @@ const Reports: React.FC = () => {
                                                     {item.employeeName}
                                                 </button>
                                             </td>
-                                            <td className="p-3">{formatCurrency(item.monthlySalary, settings.currency)}</td>
                                             <td className="p-3 font-bold text-blue-600">{item.effectiveDays}</td>
                                             <td className="p-3">{item.leaveDays}</td>
                                             <td className="p-3">{item.sickDays}</td>
@@ -127,13 +186,13 @@ const Reports: React.FC = () => {
                                 </tbody>
                                 <tfoot className="bg-gray-200 font-bold">
                                     <tr>
-                                        <td colSpan={10} className="p-3 text-right">جمع کل پرداختی:</td>
+                                        <td colSpan={9} className="p-3 text-right">جمع کل پرداختی:</td>
                                         <td className="p-3">{formatCurrency(totalPayAllEmployees, settings.currency, true)}</td>
                                     </tr>
                                 </tfoot>
                             </table>
                              {salaryReportData.length === 0 && (
-                                <div className="text-center p-6 text-gray-500">هیچ کارمند فعالی برای نمایش گزارش حقوق در این ماه وجود ندارد.</div>
+                                <div className="text-center p-6 text-gray-500">هیچ کارمند فعالی برای نمایش گزارش حقوق در این بازه وجود ندارد.</div>
                             )}
                         </div>
                     </div>
@@ -151,13 +210,43 @@ const Reports: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="bg-white p-4 rounded-lg shadow no-print">
-                 <div role="tablist" className="tabs tabs-boxed mb-4">
+            <div className="bg-white p-4 rounded-lg shadow no-print space-y-4">
+                 <div role="tablist" className="tabs tabs-boxed">
                     <a role="tab" className={`tab ${reportView === 'salary' ? 'tab-active' : ''}`} onClick={() => setReportView('salary')}>مبلغ حقوق</a> 
                     <a role="tab" className={`tab ${reportView === 'attendanceSummary' ? 'tab-active' : ''}`} onClick={() => setReportView('attendanceSummary')}>کارکرد کلی</a>
-                    <a role="tab" className={`tab ${reportView === 'attendanceList' ? 'tab-active' : ''}`} onClick={() => setReportView('attendanceList')}>لیست کارکرد</a>
+                    <a role="tab" className={`tab ${reportView === 'attendanceList' ? 'tab-active' : ''} ${localFilter.mode === 'range' ? 'tab-disabled' : ''}`} onClick={() => localFilter.mode !== 'range' && setReportView('attendanceList')}>لیست کارکرد</a>
                     <a role="tab" className={`tab ${reportView === 'individual' ? 'tab-active' : ''}`} onClick={() => setReportView('individual')}>گزارش فردی</a>
                 </div>
+                
+                 <div className="border-t pt-4">
+                    <div role="tablist" className="tabs tabs-sm tabs-bordered">
+                        <a role="tab" className={`tab ${localFilter.mode === 'month' ? 'tab-active' : ''}`} onClick={() => setLocalFilter(f => ({...f, mode: 'month'}))}>ماهانه</a>
+                        <a role="tab" className={`tab ${localFilter.mode === 'range' ? 'tab-active' : ''}`} onClick={() => setLocalFilter(f => ({...f, mode: 'range'}))}>بازه زمانی</a>
+                    </div>
+                    <div className="p-2 flex items-center gap-4 flex-wrap">
+                        {localFilter.mode === 'month' ? (
+                            <DateSelector
+                                date={localFilter.from}
+                                onDateChange={d => setLocalFilter(f => ({...f, from: d}))}
+                            />
+                        ) : (
+                             <>
+                                <DateSelector
+                                    label="از:"
+                                    date={localFilter.from}
+                                    onDateChange={d => setLocalFilter(f => ({...f, from: d}))}
+                                />
+                                 <DateSelector
+                                    label="تا:"
+                                    date={localFilter.to}
+                                    onDateChange={d => setLocalFilter(f => ({...f, to: d}))}
+                                />
+                            </>
+                        )}
+                        <button className="btn btn-sm btn-primary" onClick={handleApplyFilter}>اعمال فیلتر</button>
+                    </div>
+                 </div>
+
                  {reportView === 'individual' && (
                     <div ref={searchContainerRef} className="form-control relative w-full max-w-xs">
                         <input 

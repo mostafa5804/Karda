@@ -41,7 +41,7 @@ const AiAssistantWidget: React.FC = () => {
             let analysisPeriod = '';
 
             if (dashboardDateFilter.mode === 'month') {
-                const summaryData = generateAttendanceSummary(activeEmployees, attendance, settings, selectedYear, selectedMonth);
+                const summaryData = generateAttendanceSummary(activeEmployees, attendance, settings, { year: selectedYear, month: selectedMonth }, { year: selectedYear, month: selectedMonth });
                 if (summaryData.length === 0) {
                     setAnalysis("داده‌ای برای تحلیل در این ماه وجود ندارد.");
                     setIsLoading(false);
@@ -70,7 +70,8 @@ const AiAssistantWidget: React.FC = () => {
 
                 allMonths.forEach(monthStr => {
                     const [year, month] = monthStr.split('-').map(Number);
-                    const monthlySummary = generateAttendanceSummary(activeEmployees, attendance, settings, year, month);
+                    // FIX: Pass 'from' and 'to' objects to generateAttendanceSummary as required by its signature.
+                    const monthlySummary = generateAttendanceSummary(activeEmployees, attendance, settings, { year, month }, { year, month });
                     monthlySummary.forEach(empSummary => {
                         const summary = allTimeSummary.get(empSummary.employeeId);
                         if (summary) {
