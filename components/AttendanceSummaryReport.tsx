@@ -14,7 +14,9 @@ interface AttendanceSummaryReportProps {
 
 const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ employees, attendance, settings, projectId }) => {
     const { selectedYear, selectedMonth } = useAppStore();
-    const { companyInfo } = useCompanyStore();
+    const { projects } = useCompanyStore();
+
+    const currentProject = projects.find(p => p.id === projectId);
 
     const data = useMemo(() => {
         return generateAttendanceSummary(employees, attendance, settings, selectedYear, selectedMonth);
@@ -24,8 +26,6 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
         window.print();
     };
     
-    const currentProjectName = companyInfo.projects.find(p => p.id === projectId)?.name || '';
-
     const ReportHeader = () => (
         <div className="mb-4">
             <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
@@ -33,12 +33,12 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
                     {/* Placeholder for the right logo from the image */}
                 </div>
                 <div className="w-1/2 text-center">
-                    <h1 className="text-xl font-bold">{companyInfo.companyName}</h1>
+                    <h1 className="text-xl font-bold">{currentProject?.companyName}</h1>
                     <h2 className="text-lg">لیست حقوق پرسنل</h2>
-                    <p>گزارش کار پروژه: {currentProjectName}</p>
+                    <p>گزارش کار پروژه: {currentProject?.name}</p>
                 </div>
                 <div className="w-1/4 flex justify-center">
-                    {companyInfo.companyLogo && <img src={companyInfo.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                    {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
                 </div>
             </div>
             <div className="flex justify-between items-center">

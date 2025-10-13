@@ -4,10 +4,12 @@ import { useCompanyStore } from '../stores/useCompanyStore';
 import { JALALI_MONTHS } from '../constants';
 
 const AppHeader: React.FC = () => {
-    const { companyName, projects, companyLogo } = useCompanyStore(state => state.companyInfo);
+    const { projects } = useCompanyStore();
     const { selectedYear, selectedMonth, goToPreviousMonth, goToNextMonth, view, currentProjectId, setCurrentProjectId } = useAppStore();
 
     const currentProject = projects.find(p => p.id === currentProjectId);
+    const companyName = currentProject?.companyName || 'KARDA';
+    const companyLogo = currentProject?.companyLogo || '';
 
     return (
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">

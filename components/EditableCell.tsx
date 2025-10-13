@@ -5,9 +5,10 @@ interface EditableCellProps {
     onSave: (newValue: string) => void;
     type?: 'text' | 'number';
     disabled?: boolean;
+    displayFormatter?: (value: string | number) => string;
 }
 
-const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, type = 'text', disabled = false }) => {
+const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, type = 'text', disabled = false, displayFormatter }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentValue, setCurrentValue] = useState(String(value));
 
@@ -53,6 +54,8 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, type = 'text
         );
     }
 
+    const displayValue = displayFormatter ? displayFormatter(value) : (type === 'number' ? Number(value).toLocaleString('fa-IR') : String(value));
+
     return (
         <div
             onClick={handleStartEditing}
@@ -60,7 +63,7 @@ const EditableCell: React.FC<EditableCellProps> = ({ value, onSave, type = 'text
             tabIndex={disabled ? -1 : 0}
             className={`w-full h-full px-2 py-3 flex items-center justify-center text-center ${disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100 rounded-md'}`}
         >
-            {type === 'number' ? Number(value).toLocaleString('fa-IR') : value}
+            {displayValue}
         </div>
     );
 };

@@ -16,7 +16,7 @@ interface ExcelActionsProps {
 
 const ExcelActions: React.FC<ExcelActionsProps> = ({ employees, attendance, projectId, year, month }) => {
     const { importAndUpsertData } = useEmployeeStore();
-    const { companyInfo } = useCompanyStore();
+    const { projects } = useCompanyStore();
     const addToast = useToastStore(state => state.addToast);
     const fileImportInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,7 +49,7 @@ const ExcelActions: React.FC<ExcelActionsProps> = ({ employees, attendance, proj
     };
 
     const handleExport = () => {
-        const currentProject = companyInfo.projects.find(p => p.id === projectId);
+        const currentProject = projects.find(p => p.id === projectId);
         exportUnifiedDataToExcel(employees, attendance, year, month, currentProject?.name || 'پروژه');
     }
 

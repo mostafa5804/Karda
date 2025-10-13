@@ -18,23 +18,32 @@ export interface EmployeeAttendance {
     [employeeId: string]: Attendance;
 }
 
+export interface CustomAttendanceCode {
+    id: string;
+    char: string;
+    description: string;
+    color: string;
+}
+
 export interface Settings {
     baseDayCount: number;
     holidays: string[];
     dayTypeOverrides: {
         [date: string]: 'normal' | 'friday' | 'holiday';
     };
+    currency: 'Toman' | 'Rial';
+    customCodes: CustomAttendanceCode[];
 }
 
 export interface Project {
     id: string;
     name: string;
+    companyName: string;
+    companyLogo: string;
 }
 
 export interface CompanyInfo {
-    companyName: string;
     projects: Project[];
-    companyLogo: string;
 }
 
 export interface ParsedExcelRow {

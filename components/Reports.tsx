@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useEmployeeStore } from '../stores/useEmployeeStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useAppStore } from '../stores/useAppStore';
@@ -6,6 +6,7 @@ import { useCompanyStore } from '../stores/useCompanyStore';
 import { useFinancialStore } from '../stores/useFinancialStore';
 import { generateReport } from '../utils/reports';
 import { exportReportToCSV } from '../utils/export';
+import { formatCurrency } from '../utils/currency';
 import { JALALI_MONTHS, ICONS } from '../constants';
 import AttendanceSummaryReport from './AttendanceSummaryReport';
 import AttendanceListReport from './AttendanceListReport';
@@ -15,17 +16,39 @@ const Reports: React.FC = () => {
     const { currentProjectId, selectedYear, selectedMonth, reportView, setReportView, selectedEmployeeIdForReport, setSelectedEmployeeIdForReport, setView } = useAppStore();
     const { getProjectData } = useEmployeeStore();
     const { getSettings } = useSettingsStore();
-    const { companyInfo } = useCompanyStore();
+    const { projects } = useCompanyStore();
     const { projectFinancials } = useFinancialStore();
 
-    // Ensure we always have a valid project ID
     const projectId = currentProjectId || 'default';
+    const currentProject = projects.find(p => p.id === projectId);
 
     const { employees, attendance } = getProjectData(projectId);
     const settings = getSettings(projectId);
     const financialData = projectFinancials[projectId] || {};
 
     const activeEmployees = useMemo(() => employees.filter(e => !e.isArchived), [employees]);
+    
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+
+    const filteredEmployees = useMemo(() => {
+        if (!searchQuery) return [];
+        const lowerCaseQuery = searchQuery.toLowerCase();
+        return activeEmployees.filter(emp => 
+            `${emp.lastName} ${emp.firstName}`.toLowerCase().includes(lowerCaseQuery)
+        );
+    }, [searchQuery, activeEmployees]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                setIsDropdownVisible(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const salaryReportData = useMemo(() => {
         if (activeEmployees.length === 0) return [];
@@ -33,7 +56,7 @@ const Reports: React.FC = () => {
     }, [activeEmployees, attendance, settings, financialData, selectedYear, selectedMonth]);
     
     const handleExport = () => {
-        exportReportToCSV(salaryReportData, companyInfo, projectId, selectedYear, selectedMonth);
+        exportReportToCSV(salaryReportData, projects, projectId, selectedYear, selectedMonth);
     };
 
     const handleViewIndividualReport = (employeeId: string) => {
@@ -60,7 +83,7 @@ const Reports: React.FC = () => {
                         <div className="flex justify-between items-center mb-4">
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-800">گزارش مبلغ حقوق - {JALALI_MONTHS[selectedMonth - 1]} {selectedYear}</h1>
-                                <p className="text-gray-600">{companyInfo.companyName} - {companyInfo.projects.find(p => p.id === projectId)?.name}</p>
+                                <p className="text-gray-600">{currentProject?.companyName} - {currentProject?.name}</p>
                             </div>
                             <button onClick={handleExport} className="btn btn-success no-print" disabled={salaryReportData.length === 0}>خروجی CSV</button>
                         </div>
@@ -76,7 +99,7 @@ const Reports: React.FC = () => {
                                         <th className="p-3 font-semibold">مساعده</th>
                                         <th className="p-3 font-semibold">پاداش</th>
                                         <th className="p-3 font-semibold">کسورات</th>
-                                        <th className="p-3 font-semibold">حقوق قابل پرداخت (تومان)</th>
+                                        <th className="p-3 font-semibold">حقوق قابل پرداخت ({settings.currency === 'Rial' ? 'ریال' : 'تومان'})</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -88,20 +111,20 @@ const Reports: React.FC = () => {
                                                     {item.employeeName}
                                                 </button>
                                             </td>
-                                            <td className="p-3">{item.monthlySalary.toLocaleString('fa-IR')}</td>
+                                            <td className="p-3">{formatCurrency(item.monthlySalary, settings.currency)}</td>
                                             <td className="p-3 font-bold text-blue-600">{item.effectiveDays}</td>
                                             <td className="p-3 font-bold text-purple-600">{item.overtimeHours}</td>
-                                            <td className="p-3 text-orange-600">{(item.advance || 0).toLocaleString('fa-IR')}</td>
-                                            <td className="p-3 text-green-600">{(item.bonus || 0).toLocaleString('fa-IR')}</td>
-                                            <td className="p-3 text-red-600">{(item.deduction || 0).toLocaleString('fa-IR')}</td>
-                                            <td className="p-3 font-bold">{Math.round(item.totalPay).toLocaleString('fa-IR')}</td>
+                                            <td className="p-3 text-orange-600">{formatCurrency(item.advance, settings.currency)}</td>
+                                            <td className="p-3 text-green-600">{formatCurrency(item.bonus, settings.currency)}</td>
+                                            <td className="p-3 text-red-600">{formatCurrency(item.deduction, settings.currency)}</td>
+                                            <td className="p-3 font-bold">{formatCurrency(item.totalPay, settings.currency)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                                 <tfoot className="bg-gray-200 font-bold">
                                     <tr>
                                         <td colSpan={8} className="p-3 text-right">جمع کل پرداختی:</td>
-                                        <td className="p-3">{Math.round(totalPayAllEmployees).toLocaleString('fa-IR')} تومان</td>
+                                        <td className="p-3">{formatCurrency(totalPayAllEmployees, settings.currency, true)}</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -132,17 +155,38 @@ const Reports: React.FC = () => {
                     <a role="tab" className={`tab ${reportView === 'individual' ? 'tab-active' : ''}`} onClick={() => setReportView('individual')}>گزارش فردی</a>
                 </div>
                  {reportView === 'individual' && (
-                    <div className="form-control">
-                        <select 
-                            className="select select-bordered w-full max-w-xs"
-                            value={selectedEmployeeIdForReport || ""}
-                            onChange={(e) => setSelectedEmployeeIdForReport(e.target.value || null)}
-                        >
-                            <option value="">یک کارمند را انتخاب کنید</option>
-                            {activeEmployees.map(emp => (
-                                <option key={emp.id} value={emp.id}>{emp.lastName} {emp.firstName}</option>
-                            ))}
-                        </select>
+                    <div ref={searchContainerRef} className="form-control relative w-full max-w-xs">
+                        <input 
+                            type="text"
+                            className="input input-bordered w-full"
+                            placeholder="جستجوی کارمند..."
+                            value={isDropdownVisible ? searchQuery : (selectedEmployee ? `${selectedEmployee.lastName} ${selectedEmployee.firstName}` : searchQuery)}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                if (!isDropdownVisible) setIsDropdownVisible(true);
+                            }}
+                            onFocus={() => {
+                                setIsDropdownVisible(true);
+                                setSearchQuery('');
+                            }}
+                        />
+                        {isDropdownVisible && filteredEmployees.length > 0 && (
+                            <ul className="absolute z-20 w-full mt-1 menu p-2 shadow bg-base-100 rounded-box max-h-60 overflow-y-auto">
+                                {filteredEmployees.map(emp => (
+                                    <li key={emp.id}>
+                                        <a
+                                            onClick={() => {
+                                                setSelectedEmployeeIdForReport(emp.id);
+                                                setSearchQuery('');
+                                                setIsDropdownVisible(false);
+                                            }}
+                                        >
+                                            {emp.lastName} {emp.firstName}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                          {activeEmployees.length === 0 && <p className="text-sm text-gray-500 mt-2">هیچ کارمند فعالی برای انتخاب وجود ندارد.</p>}
                     </div>
                 )}

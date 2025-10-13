@@ -4,6 +4,8 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { useAppStore } from '../stores/useAppStore';
 import { useToastStore } from '../stores/useToastStore';
 import { getDaysInJalaliMonth, getFirstDayOfMonthJalali, getFormattedDate } from '../utils/calendar';
+import { formatCurrency } from '../utils/currency';
+import { getContrastingTextColor } from '../utils/color';
 import { JALALI_DAYS_ABBR } from '../constants';
 import AddEmployeeRow from './AddEmployeeRow';
 import EditableCell from './EditableCell';
@@ -82,6 +84,7 @@ const AttendanceTable: React.FC = () => {
     const daysInMonth = useMemo(() => getDaysInJalaliMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
     const firstDayOfMonth = useMemo(() => getFirstDayOfMonthJalali(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
     const visibleEmployees = useMemo(() => employees.filter(e => showArchived || !e.isArchived), [employees, showArchived]);
+    const customCodeMap = useMemo(() => new Map(settings.customCodes.map(c => [c.char, c])), [settings.customCodes]);
 
     const handleConfirmEmployeeAction = () => {
         if (!employeeToModify) return;
@@ -153,11 +156,11 @@ const AttendanceTable: React.FC = () => {
                     <thead className="align-top">
                         <tr>
                             <th className="p-1 border border-gray-300 text-center sticky top-0 z-20 bg-gray-200" style={{width: '3rem'}}>#</th>
-                            <th className="p-1 border border-gray-300 text-center sticky top-0 z-20 bg-gray-200" style={{width: '6rem'}}>عملیات</th>
+                            <th className="p-1 border border-gray-300 text-center sticky top-0 z-20 bg-gray-200" style={{width: '8rem'}}>عملیات</th>
                             <ResizableHeader title="نام خانوادگی" width={columnWidths.lastName} onResize={handleMouseDown} columnKey="lastName" />
                             <ResizableHeader title="نام" width={columnWidths.firstName} onResize={handleMouseDown} columnKey="firstName" />
                             <ResizableHeader title="سمت" width={columnWidths.position} onResize={handleMouseDown} columnKey="position" />
-                            <ResizableHeader title="حقوق ماهانه (تومان)" width={columnWidths.monthlySalary} onResize={handleMouseDown} columnKey="monthlySalary" />
+                            <ResizableHeader title={`حقوق ماهانه (${settings.currency === 'Rial' ? 'ریال' : 'تومان'})`} width={columnWidths.monthlySalary} onResize={handleMouseDown} columnKey="monthlySalary" />
                             {renderTableHeader()}
                         </tr>
                     </thead>
@@ -173,31 +176,46 @@ const AttendanceTable: React.FC = () => {
                                         <button onClick={() => setEmployeeToModify({ id: emp.id, name: `${emp.lastName} ${emp.firstName}`, action: emp.isArchived ? 'unarchive' : 'archive' })} className="btn btn-xs btn-ghost" title={emp.isArchived ? 'خروج از بایگانی' : 'بایگانی'}>
                                             {emp.isArchived ? '♻️' : '🗄️'}
                                         </button>
-                                        {emp.isArchived && (
-                                             <button onClick={() => setEmployeeToModify({ id: emp.id, name: `${emp.lastName} ${emp.firstName}`, action: 'delete' })} className="btn btn-xs btn-ghost text-red-600" title="حذف دائمی">
-                                                🗑️
-                                             </button>
-                                        )}
+                                        <button onClick={() => setEmployeeToModify({ id: emp.id, name: `${emp.lastName} ${emp.firstName}`, action: 'delete' })} className="btn btn-xs btn-ghost text-red-600" title="حذف دائمی">
+                                            🗑️
+                                        </button>
                                     </div>
                                 </td>
                                 <td className="p-0 border border-gray-300"><EditableCell value={emp.lastName} onSave={val => updateEmployee(projectId, emp.id, { lastName: val })} /></td>
                                 <td className="p-0 border border-gray-300"><EditableCell value={emp.firstName} onSave={val => updateEmployee(projectId, emp.id, { firstName: val })} /></td>
                                 <td className="p-0 border border-gray-300"><EditableCell value={emp.position} onSave={val => updateEmployee(projectId, emp.id, { position: val })} /></td>
-                                <td className="p-0 border border-gray-300"><EditableCell type="number" value={emp.monthlySalary} onSave={val => updateEmployee(projectId, emp.id, { monthlySalary: Number(val) || 0 })} /></td>
+                                <td className="p-0 border border-gray-300">
+                                    <EditableCell 
+                                        type="number" 
+                                        value={emp.monthlySalary} 
+                                        onSave={val => updateEmployee(projectId, emp.id, { monthlySalary: Number(val) || 0 })}
+                                        displayFormatter={(val) => formatCurrency(Number(val), settings.currency)}
+                                    />
+                                </td>
                                 {Array.from({ length: daysInMonth }, (_, i) => {
                                     const day = i + 1;
                                     const date = getFormattedDate(selectedYear, selectedMonth, day);
                                     const value = attendance[emp.id]?.[date] || '';
                                     const dayOfWeek = (firstDayOfMonth + i) % 7;
-                                    const override = settings.dayTypeOverrides[date];
-                                    let dayType = override || (dayOfWeek === 6 ? 'friday' : (settings.holidays.includes(date) ? 'holiday' : 'normal'));
+
+                                    const customCode = customCodeMap.get(value);
+                                    let cellBgClass = '';
+                                    let cellStyle: React.CSSProperties = {};
+                                    let cellTitle = '';
                                     
-                                    let cellBg = '';
-                                    if(dayType === 'friday') cellBg = 'bg-green-100/50';
-                                    if(dayType === 'holiday') cellBg = 'bg-yellow-100/50';
+                                    if (customCode) {
+                                        cellStyle.backgroundColor = customCode.color;
+                                        cellStyle.color = getContrastingTextColor(customCode.color);
+                                        cellTitle = customCode.description;
+                                    } else {
+                                        const override = settings.dayTypeOverrides[date];
+                                        let dayType = override || (dayOfWeek === 6 ? 'friday' : (settings.holidays.includes(date) ? 'holiday' : 'normal'));
+                                        if(dayType === 'friday') cellBgClass = 'bg-green-100/50';
+                                        if(dayType === 'holiday') cellBgClass = 'bg-yellow-100/50';
+                                    }
                                     
                                     return (
-                                        <td key={date} className={`p-0 border border-gray-300 w-12 h-12 ${cellBg}`}>
+                                        <td key={date} className={`p-0 border border-gray-300 w-12 h-12 ${cellBgClass}`} style={cellStyle} title={cellTitle}>
                                             <EditableCell value={value} onSave={val => updateAttendance(projectId, emp.id, date, val)} />
                                         </td>
                                     );

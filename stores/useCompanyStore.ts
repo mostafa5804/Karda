@@ -1,61 +1,64 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CompanyInfo, Project } from '../types';
+import { Project } from '../types';
 
 interface CompanyState {
-    companyInfo: CompanyInfo;
-    updateCompanyInfo: (newInfo: Partial<Omit<CompanyInfo, 'projects'>>) => void;
+    projects: Project[];
     addProject: (name: string) => string;
-    updateProject: (id: string, name: string) => void;
+    updateProject: (id: string, updates: Partial<Omit<Project, 'id'>>) => void;
     removeProject: (id: string) => void;
-    setCompanyLogo: (logo: string) => void;
-    getStateForBackup: () => { companyInfo: CompanyInfo };
-    restoreState: (state: { companyInfo: CompanyInfo }) => void;
+    getStateForBackup: () => { projects: Project[] };
+    restoreState: (state: { projects: Project[] }) => void;
 }
 
 export const useCompanyStore = create(
     persist<CompanyState>(
         (set, get) => ({
-            companyInfo: {
+            projects: [{ 
+                id: 'default', 
+                name: 'پروژه اصلی',
                 companyName: 'نام شرکت شما',
-                projects: [{ id: 'default', name: 'پروژه اصلی' }],
                 companyLogo: '',
-            },
-            updateCompanyInfo: (newInfo) => set((state) => ({
-                companyInfo: { ...state.companyInfo, ...newInfo },
-            })),
+            }],
             addProject: (name) => {
-                const newProject: Project = { id: new Date().toISOString(), name };
+                const newProject: Project = { 
+                    id: new Date().toISOString(), 
+                    name,
+                    companyName: 'نام شرکت جدید',
+                    companyLogo: '',
+                };
                 set((state) => ({
-                    companyInfo: {
-                        ...state.companyInfo,
-                        projects: [...state.companyInfo.projects, newProject],
-                    },
+                    projects: [...state.projects, newProject],
                 }));
                 return newProject.id;
             },
-            updateProject: (id, name) => set((state) => ({
-                companyInfo: {
-                    ...state.companyInfo,
-                    projects: state.companyInfo.projects.map(p => p.id === id ? { ...p, name } : p),
-                },
+            updateProject: (id, updates) => set((state) => ({
+                projects: state.projects.map(p => p.id === id ? { ...p, ...updates } : p),
             })),
             removeProject: (id) => set((state) => ({
-                companyInfo: {
-                    ...state.companyInfo,
-                    projects: state.companyInfo.projects.filter(p => p.id !== id),
-                },
-            })),
-            setCompanyLogo: (logo) => set(state => ({
-                companyInfo: { ...state.companyInfo, companyLogo: logo }
+                projects: state.projects.filter(p => p.id !== id),
             })),
             getStateForBackup: () => ({
-                companyInfo: get().companyInfo,
+                projects: get().projects,
             }),
-            restoreState: (state) => set(state),
+            restoreState: (state) => {
+                // Compatibility for old structure
+                if ((state as any).companyInfo) {
+                    const oldState = (state as any).companyInfo;
+                     set({
+                        projects: oldState.projects.map((p: any) => ({
+                            ...p,
+                            companyName: oldState.companyName || 'نام شرکت شما',
+                            companyLogo: oldState.companyLogo || ''
+                        }))
+                    });
+                } else {
+                    set(state)
+                }
+            },
         }),
         {
-            name: 'company-info-storage',
+            name: 'company-info-storage-v2', // Version bump
             storage: createJSONStorage(() => localStorage),
         }
     )

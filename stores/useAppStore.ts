@@ -22,6 +22,9 @@ interface AppState {
     selectedEmployeeIdForReport: string | null;
     setSelectedEmployeeIdForReport: (employeeId: string | null) => void;
 
+    isSidebarCollapsed: boolean;
+    toggleSidebar: () => void;
+
     dashboardDateFilter: DashboardDateFilter;
     setDashboardDateFilter: (filter: DashboardDateFilter) => void;
 }
@@ -62,6 +65,9 @@ export const useAppStore = create(
 
             selectedEmployeeIdForReport: null,
             setSelectedEmployeeIdForReport: (employeeId) => set({ selectedEmployeeIdForReport: employeeId }),
+
+            isSidebarCollapsed: false,
+            toggleSidebar: () => set(state => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
 
             dashboardDateFilter: { mode: 'all' },
             setDashboardDateFilter: (filter) => set({ dashboardDateFilter: filter }),

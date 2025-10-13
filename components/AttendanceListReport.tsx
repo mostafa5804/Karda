@@ -14,7 +14,7 @@ interface AttendanceListReportProps {
 
 const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, attendance, settings, projectId }) => {
     const { selectedYear, selectedMonth } = useAppStore();
-    const { companyInfo } = useCompanyStore();
+    const { projects } = useCompanyStore();
 
     const daysInMonth = getDaysInJalaliMonth(selectedYear, selectedMonth);
     const firstDay = getFirstDayOfMonthJalali(selectedYear, selectedMonth);
@@ -28,7 +28,7 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
         document.getElementById('print-landscape-style')?.remove();
     };
 
-    const currentProjectName = companyInfo.projects.find(p => p.id === projectId)?.name || '';
+    const currentProjectName = projects.find(p => p.id === projectId)?.name || '';
 
     const ReportHeader = () => (
         <div className="mb-4 text-center">

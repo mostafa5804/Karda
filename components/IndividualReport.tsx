@@ -6,6 +6,7 @@ import { useCompanyStore } from '../stores/useCompanyStore';
 import { useFinancialStore } from '../stores/useFinancialStore';
 import { MonthlyFinancials } from '../types';
 import { generateReport, generateAttendanceSummary } from '../utils/reports';
+import { formatCurrency } from '../utils/currency';
 import { JALALI_MONTHS, ICONS } from '../constants';
 import { Employee } from '../types';
 
@@ -77,16 +78,16 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, employees
     const { getProjectData } = useEmployeeStore();
     const { getSettings } = useSettingsStore();
     const { selectedYear, selectedMonth } = useAppStore();
-    const { companyInfo } = useCompanyStore();
+    const { projects } = useCompanyStore();
     const { projectFinancials } = useFinancialStore();
     
     const { attendance } = getProjectData(projectId);
     const settings = getSettings(projectId);
     const financialData = projectFinancials[projectId] || {};
+    const currentProject = projects.find(p => p.id === projectId);
 
     const salaryData = useMemo(() => {
         if (!employee) return null;
-        // FIX: Corrected the arguments for generateReport. The second argument should be 'attendance', not 'financialData'.
         const report = generateReport([employee], attendance, settings, financialData, selectedYear, selectedMonth);
         return report[0];
     }, [employee, attendance, settings, financialData, selectedYear, selectedMonth]);
@@ -117,15 +118,15 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, employees
          <div className="mb-4">
             <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
                 <div className="text-right">
-                    <h1 className="text-xl font-bold">{companyInfo.companyName}</h1>
-                    <p>پروژه: {companyInfo.projects.find(p => p.id === projectId)?.name}</p>
+                    <h1 className="text-xl font-bold">{currentProject?.companyName}</h1>
+                    <p>پروژه: {currentProject?.name}</p>
                 </div>
                  <div className="text-center">
                     <h2 className="text-lg font-bold">گزارش کارکرد ماهانه فردی</h2>
                     <p>{JALALI_MONTHS[selectedMonth - 1]} {selectedYear}</p>
                 </div>
                 <div className="w-1/4 flex justify-end">
-                    {companyInfo.companyLogo && <img src={companyInfo.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                    {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
                 </div>
             </div>
              <div className="flex justify-between items-center bg-gray-100 p-2 rounded">
@@ -164,16 +165,16 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, employees
                         <div className="border p-4 rounded-lg">
                             <h3 className="text-lg font-bold mb-2 border-b pb-1">خلاصه حقوق</h3>
                             <div className="space-y-2 text-sm">
-                               <p className="flex justify-between"><span>حقوق پایه ماهانه:</span> <span className="font-mono">{salaryData.monthlySalary.toLocaleString('fa-IR')}</span></p>
-                               <p className="flex justify-between"><span>نرخ هر روز کاری:</span> <span className="font-mono">{Math.round(salaryData.dailyRate).toLocaleString('fa-IR')}</span></p>
+                               <p className="flex justify-between"><span>حقوق پایه ماهانه:</span> <span className="font-mono">{formatCurrency(salaryData.monthlySalary, settings.currency, true)}</span></p>
+                               <p className="flex justify-between"><span>نرخ هر روز کاری:</span> <span className="font-mono">{formatCurrency(salaryData.dailyRate, settings.currency, true)}</span></p>
                                <p className="flex justify-between"><span>روزهای کاری موثر:</span> <span className="font-mono">{salaryData.effectiveDays} روز</span></p>
                                <p className="flex justify-between"><span>ساعات اضافه کاری:</span> <span className="font-mono">{salaryData.overtimeHours} ساعت</span></p>
                                <hr/>
-                               <p className="flex justify-between"><span>مساعده:</span> <span className="font-mono text-red-600">{(salaryData.advance || 0).toLocaleString('fa-IR')}</span></p>
-                               <p className="flex justify-between"><span>پاداش:</span> <span className="font-mono text-green-600">{(salaryData.bonus || 0).toLocaleString('fa-IR')}</span></p>
-                               <p className="flex justify-between"><span>کسورات:</span> <span className="font-mono text-red-600">{(salaryData.deduction || 0).toLocaleString('fa-IR')}</span></p>
+                               <p className="flex justify-between"><span>مساعده:</span> <span className="font-mono text-red-600">{formatCurrency(salaryData.advance, settings.currency, true)}</span></p>
+                               <p className="flex justify-between"><span>پاداش:</span> <span className="font-mono text-green-600">{formatCurrency(salaryData.bonus, settings.currency, true)}</span></p>
+                               <p className="flex justify-between"><span>کسورات:</span> <span className="font-mono text-red-600">{formatCurrency(salaryData.deduction, settings.currency, true)}</span></p>
                                <hr />
-                               <p className="flex justify-between text-base font-bold"><span>قابل پرداخت (تومان):</span> <span className="font-mono text-blue-700">{Math.round(salaryData.totalPay).toLocaleString('fa-IR')}</span></p>
+                               <p className="flex justify-between text-base font-bold"><span>قابل پرداخت ({settings.currency === 'Rial' ? 'ریال' : 'تومان'}):</span> <span className="font-mono text-blue-700">{formatCurrency(salaryData.totalPay, settings.currency)}</span></p>
                             </div>
                         </div>
                          {/* Attendance Details */}
