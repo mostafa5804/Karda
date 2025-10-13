@@ -1,4 +1,4 @@
-export type View = 'dashboard' | 'attendance' | 'reports' | 'settings';
+export type View = 'dashboard' | 'attendance' | 'personnel' | 'reports' | 'settings';
 export type ReportView = 'salary' | 'attendanceSummary' | 'attendanceList' | 'individual';
 
 export interface Employee {
@@ -8,15 +8,23 @@ export interface Employee {
     position: string;
     monthlySalary: number;
     isArchived: boolean;
+    fatherName?: string;
+    nationalId?: string;
+    phone?: string;
+    maritalStatus?: 'single' | 'married';
+    childrenCount?: number;
+    militaryServiceStatus?: 'not_applicable' | 'completed' | 'exempt' | 'pending';
+    address?: string;
+    iban?: string;
+    contractStartDate?: string;
+    contractEndDate?: string;
 }
 
-export interface Attendance {
-    [date: string]: string; // date is 'YYYY-MM-DD'
-}
+// Attendance for a single employee: { 'YYYY-MM-DD': 'status' }
+export type Attendance = Record<string, string>;
 
-export interface EmployeeAttendance {
-    [employeeId: string]: Attendance;
-}
+// Attendance for all employees in a project: { 'employeeId': Attendance }
+export type EmployeeAttendance = Record<string, Attendance>;
 
 export interface CustomAttendanceCode {
     id: string;
@@ -28,30 +36,9 @@ export interface CustomAttendanceCode {
 export interface Settings {
     baseDayCount: number;
     holidays: string[];
-    dayTypeOverrides: {
-        [date: string]: 'normal' | 'friday' | 'holiday';
-    };
+    dayTypeOverrides: { [date: string]: 'normal' | 'friday' | 'holiday' };
     currency: 'Toman' | 'Rial';
     customCodes: CustomAttendanceCode[];
-}
-
-export interface Project {
-    id: string;
-    name: string;
-    companyName: string;
-    companyLogo: string;
-}
-
-export interface CompanyInfo {
-    projects: Project[];
-}
-
-export interface ParsedExcelRow {
-    lastName: string;
-    firstName: string;
-    position: string;
-    monthlySalary: number;
-    attendance: Attendance;
 }
 
 export interface MonthlyFinancials {
@@ -60,29 +47,18 @@ export interface MonthlyFinancials {
     deduction?: number;
 }
 
-export interface FinancialData {
-    [employeeId: string]: {
-        [year: number]: {
-            [month: number]: MonthlyFinancials;
-        };
-    };
+// Financial data for all employees in a project
+// { [employeeId]: { [year]: { [month]: MonthlyFinancials } } }
+export type FinancialData = Record<string, Record<number, Record<number, MonthlyFinancials>>>;
+
+export interface Project {
+    id: string;
+    name: string;
+    companyName: string;
+    companyLogo: string;
 }
 
-export interface ReportData {
-    employeeId: string;
-    employeeName: string;
-    monthlySalary: number;
-    effectiveDays: number;
-    absentDays: number;
-    leaveDays: number;
-    overtimeHours: number;
-    totalPayableDays: number;
-    totalPay: number;
-    dailyRate: number;
-    advance: number;
-    bonus: number;
-    deduction: number;
-}
+export type DashboardDateFilter = { mode: 'all' } | { mode: 'month'; year: number; month: number };
 
 export interface AttendanceSummaryData {
     employeeId: string;
@@ -101,19 +77,50 @@ export interface AttendanceSummaryData {
     notes: string;
 }
 
-// --- New and Updated Dashboard Types ---
+export interface ReportData {
+    employeeId: string;
+    employeeName: string;
+    monthlySalary: number;
+    effectiveDays: number;
+    absentDays: number;
+    leaveDays: number;
+    sickDays: number;
+    overtimeHours: number;
+    totalPayableDays: number;
+    totalPay: number;
+    dailyRate: number;
+    advance: number;
+    bonus: number;
+    deduction: number;
+}
 
-export type DashboardDateFilter = {
-    mode: 'all' | 'month';
-    year?: number;
-    month?: number;
-};
+export interface ParsedExcelRow {
+    lastName: string;
+    firstName: string;
+    position: string;
+    monthlySalary: number;
+    attendance: Attendance;
+}
 
+// Note data for all projects
+// { [projectId]: { [employeeId]: { [date]: string } } }
+export type ProjectNoteData = Record<string, Record<string, Record<string, string>>>;
+
+
+// Dashboard-specific types
 export interface DailyStats {
     total: number;
     present: number;
     onLeave: number;
     absent: number;
+}
+
+export interface MonthlyDashboardStats {
+    totalEmployees: number;
+    activeEmployees: number;
+    totalPayForMonth: number;
+    totalOvertimeHours: number;
+    totalAbsences: number;
 }
 
 export interface ProjectWideStats {
@@ -122,21 +129,20 @@ export interface ProjectWideStats {
     totalOvertimeHours: number;
 }
 
+export interface EmployeeTrendData {
+    labels: string[];
+    data: number[];
+}
+
 export interface SalaryDistributionData {
     labels: string[];
     data: number[];
 }
 
-export interface EmployeeTrendData {
-    labels: string[]; // e.g., "1402-01", "1402-02"
-    data: number[];
-}
+// For useSortableTable hook
+export type SortDirection = 'asc' | 'desc' | null;
 
-
-export interface MonthlyDashboardStats {
-    totalEmployees: number;
-    activeEmployees: number;
-    totalPayForMonth: number;
-    totalOvertimeHours: number;
-    totalAbsences: number;
+export interface SortConfig<T> {
+    key: keyof T | null;
+    direction: SortDirection;
 }

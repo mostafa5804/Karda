@@ -1,5 +1,4 @@
 import * as XLSX from 'xlsx';
-// FIX: Import 'Employee' and 'EmployeeAttendance' types to resolve missing type errors.
 import { ParsedExcelRow, Attendance, Employee, EmployeeAttendance } from '../types';
 import { getDaysInJalaliMonth, getFormattedDate } from './calendar';
 
@@ -124,4 +123,101 @@ export const downloadUnifiedTemplate = (year: number, month: number) => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'قالب ورود اطلاعات');
 
     XLSX.writeFile(workbook, `قالب-ورود-اطلاعات-${year}-${month}.xlsx`);
+};
+
+// New functions for personnel data
+const PERSONNEL_HEADERS = [
+    { label: 'نام خانوادگی', key: 'lastName' },
+    { label: 'نام', key: 'firstName' },
+    { label: 'نام پدر', key: 'fatherName' },
+    { label: 'کد ملی', key: 'nationalId' },
+    { label: 'شماره تلفن', key: 'phone' },
+    { label: 'وضعیت تاهل', key: 'maritalStatus' },
+    { label: 'تعداد فرزندان', key: 'childrenCount' },
+    { label: 'وضعیت خدمت', key: 'militaryServiceStatus' },
+    { label: 'آدرس', key: 'address' },
+    { label: 'شماره شبا', key: 'iban' },
+    { label: 'سمت', key: 'position' },
+    { label: 'حقوق ماهانه', key: 'monthlySalary' },
+    { label: 'تاریخ شروع قرارداد', key: 'contractStartDate' },
+    { label: 'تاریخ پایان قرارداد', key: 'contractEndDate' },
+];
+
+export const exportPersonnelToExcel = (employees: Employee[], projectName: string) => {
+    const headers = PERSONNEL_HEADERS.map(h => h.label);
+    const data = employees.map(emp => {
+        return PERSONNEL_HEADERS.map(h => emp[h.key as keyof Employee] ?? '');
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'لیست پرسنل');
+    const fileName = `خروجی-پرسنل-${projectName}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+};
+
+export const downloadPersonnelTemplate = () => {
+    const headers = PERSONNEL_HEADERS.map(h => h.label);
+    const exampleRow = ['مثالی', 'علی', 'حسین', '0012345678', '09123456789', 'married', 1, 'completed', 'آدرس نمونه', '123456789012345678901234', 'برنامه‌نویس', 15000000, '1403-01-01', '1404-01-01'];
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'قالب پرسنل');
+    XLSX.writeFile(workbook, 'قالب-ورود-پرسنل.xlsx');
+};
+
+export const importPersonnelFromExcel = (file: File): Promise<Partial<Employee>[]> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+                
+                const headerMap = new Map<string, keyof Employee>();
+                PERSONNEL_HEADERS.forEach(h => headerMap.set(normalizeHeader(h.label), h.key as keyof Employee));
+
+                const personnel = json.map((row, index) => {
+                    const normalizedRow = Object.keys(row).reduce((acc, key) => {
+                        acc[normalizeHeader(key)] = row[key];
+                        return acc;
+                    }, {} as any);
+
+                    const newEmp: Partial<Employee> = {};
+                    let hasData = false;
+                    for (const [normHeader, value] of Object.entries(normalizedRow)) {
+                         if (headerMap.has(normHeader) && value !== null && value !== undefined) {
+                            const empKey = headerMap.get(normHeader)!;
+                            // FIX: The type of 'value' is unknown and cannot be assigned to a specific property of Employee.
+                            // Cast to 'any' to bypass the type check for this dynamic assignment.
+                            (newEmp as any)[empKey] = value;
+                            hasData = true;
+                        }
+                    }
+                    
+                    if (!hasData) return null;
+
+                    // Data type corrections
+                    if (newEmp.monthlySalary) newEmp.monthlySalary = Number(String(newEmp.monthlySalary).replace(/,/g, ''));
+                    if (newEmp.childrenCount) newEmp.childrenCount = Number(newEmp.childrenCount);
+                    
+                    if (!newEmp.nationalId) {
+                        throw new Error(`ردیف ${index + 2}: کد ملی برای شناسایی کارمند اجباری است.`);
+                    }
+                    
+                    return newEmp;
+                }).filter(Boolean) as Partial<Employee>[];
+
+                resolve(personnel);
+            } catch (error) {
+                 const message = error instanceof Error ? error.message : 'یک خطای ناشناخته در پردازش فایل رخ داد.';
+                reject(new Error(message));
+            }
+        };
+        reader.onerror = () => reject(new Error('خطا در خواندن فایل.'));
+        reader.readAsArrayBuffer(file);
+    });
 };

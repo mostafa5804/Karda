@@ -95,6 +95,8 @@ const Reports: React.FC = () => {
                                         <th className="p-3 font-semibold text-right">نام کارمند</th>
                                         <th className="p-3 font-semibold">حقوق پایه</th>
                                         <th className="p-3 font-semibold">روزهای موثر</th>
+                                        <th className="p-3 font-semibold">مرخصی</th>
+                                        <th className="p-3 font-semibold">استعلاجی</th>
                                         <th className="p-3 font-semibold">اضافه کاری</th>
                                         <th className="p-3 font-semibold">مساعده</th>
                                         <th className="p-3 font-semibold">پاداش</th>
@@ -113,6 +115,8 @@ const Reports: React.FC = () => {
                                             </td>
                                             <td className="p-3">{formatCurrency(item.monthlySalary, settings.currency)}</td>
                                             <td className="p-3 font-bold text-blue-600">{item.effectiveDays}</td>
+                                            <td className="p-3">{item.leaveDays}</td>
+                                            <td className="p-3">{item.sickDays}</td>
                                             <td className="p-3 font-bold text-purple-600">{item.overtimeHours}</td>
                                             <td className="p-3 text-orange-600">{formatCurrency(item.advance, settings.currency)}</td>
                                             <td className="p-3 text-green-600">{formatCurrency(item.bonus, settings.currency)}</td>
@@ -123,7 +127,7 @@ const Reports: React.FC = () => {
                                 </tbody>
                                 <tfoot className="bg-gray-200 font-bold">
                                     <tr>
-                                        <td colSpan={8} className="p-3 text-right">جمع کل پرداختی:</td>
+                                        <td colSpan={10} className="p-3 text-right">جمع کل پرداختی:</td>
                                         <td className="p-3">{formatCurrency(totalPayAllEmployees, settings.currency, true)}</td>
                                     </tr>
                                 </tfoot>

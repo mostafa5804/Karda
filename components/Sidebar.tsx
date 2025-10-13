@@ -9,6 +9,7 @@ const Sidebar: React.FC = () => {
     const navItems: { view: View, label: string, icon: React.ReactNode }[] = [
         { view: 'dashboard', label: 'داشبورد', icon: ICONS.dashboard },
         { view: 'attendance', label: 'حضور و غیاب', icon: ICONS.attendance },
+        { view: 'personnel', label: 'پرسنل', icon: ICONS.personnel },
         { view: 'reports', label: 'گزارش‌ها', icon: ICONS.reports },
         { view: 'settings', label: 'تنظیمات', icon: ICONS.settings },
     ];

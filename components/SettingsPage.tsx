@@ -7,6 +7,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { useToastStore } from '../stores/useToastStore';
 import ConfirmationModal from './ConfirmationModal';
 import { Settings, CustomAttendanceCode } from '../types';
+import { useNotesStore } from '../stores/useNotesStore';
 
 const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     const { getSettings, addCustomCode, updateCustomCode, removeCustomCode } = useSettingsStore();
@@ -30,10 +31,9 @@ const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     };
     
     return (
-        <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">کدهای وضعیت سفارشی</h2>
-            <p className="text-sm text-gray-600 mb-4">کدهای تک-حرفی برای ثبت وضعیت‌های خاص (مثل نیم-روز، دورکاری و...) تعریف کنید. این کدها در جدول حضور و غیاب با رنگ و توضیحات مشخص‌شده نمایش داده می‌شوند.</p>
-
+        <>
+            <h3 className="font-semibold text-gray-700 mb-2">کدهای سفارشی شما</h3>
+             <p className="text-sm text-gray-600 mb-4">کدهای تک-حرفی برای ثبت وضعیت‌های خاص (مثل نیم-روز، دورکاری و...) تعریف کنید. این کدها در جدول حضور و غیاب با رنگ و توضیحات مشخص‌شده نمایش داده می‌شوند.</p>
             <div className="space-y-2 mb-4">
                 {settings.customCodes.map(code => (
                     <div key={code.id} className="grid grid-cols-12 gap-2 items-center">
@@ -51,7 +51,7 @@ const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
                 <input type="color" value={newCode.color} onChange={e => setNewCode(c => ({...c, color: e.target.value}))} className="input input-sm p-1 col-span-2" />
                 <button onClick={handleAddCode} className="btn btn-sm btn-secondary col-span-3">افزودن</button>
             </div>
-        </div>
+        </>
     );
 }
 
@@ -67,6 +67,7 @@ const SettingsPage: React.FC = () => {
     const { getSettings, updateSettings, removeProjectSettings } = useSettingsStore();
     const { removeProjectData } = useEmployeeStore();
     const { removeProjectFinancials } = useFinancialStore();
+    const { removeProjectNotes } = useNotesStore();
     
     const projectSettings = getSettings(projectId);
 
@@ -142,6 +143,7 @@ const SettingsPage: React.FC = () => {
         removeProjectData(id);
         removeProjectSettings(id);
         removeProjectFinancials(id);
+        removeProjectNotes(id);
         
         const remainingProject = projects.find(p => p.id !== id);
         setCurrentProjectId(remainingProject ? remainingProject.id : null);
@@ -153,6 +155,8 @@ const SettingsPage: React.FC = () => {
     const { getStateForBackup: getSettingsState, restoreState: restoreSettingsState } = useSettingsStore();
     const { getStateForBackup: getCompanyState, restoreState: restoreCompanyState } = useCompanyStore();
     const { getStateForBackup: getFinancialState, restoreState: restoreFinancialState } = useFinancialStore();
+    const { getStateForBackup: getNotesState, restoreState: restoreNotesState } = useNotesStore();
+
 
     const handleBackup = () => {
         const backupData = {
@@ -160,7 +164,8 @@ const SettingsPage: React.FC = () => {
             employees: getEmployeeState(),
             settings: getSettingsState(),
             financials: getFinancialState(),
-            backupVersion: '2.2.0',
+            notes: getNotesState(),
+            backupVersion: '2.3.0',
             backupDate: new Date().toISOString(),
         };
 
@@ -200,6 +205,9 @@ const SettingsPage: React.FC = () => {
                 restoreEmployeeState(backupData.employees);
                 restoreSettingsState(backupData.settings);
                 restoreFinancialState(backupData.financials);
+                if (backupData.notes) {
+                    restoreNotesState(backupData.notes);
+                }
 
                 addToast('اطلاعات با موفقیت بازیابی شد. صفحه مجددا بارگذاری می‌شود.', 'success');
                 setTimeout(() => window.location.reload(), 2000);
@@ -286,7 +294,25 @@ const SettingsPage: React.FC = () => {
                 </div>
             </div>
 
-            <CustomCodeEditor projectId={projectId} />
+            <div className="bg-white p-6 rounded-lg shadow">
+                <details>
+                    <summary className="text-xl font-bold text-gray-800 cursor-pointer list-none">
+                        <span className="select-none">مدیریت کدهای اختصاری</span>
+                    </summary>
+                    <div className="mt-4 pt-4 border-t">
+                        <h3 className="font-semibold text-gray-700 mb-2">کدهای پیش‌فرض سیستم</h3>
+                        <p className="text-sm text-gray-600 mb-4">این کدها در محاسبات اصلی سیستم استفاده می‌شوند و کاراکتر آن‌ها قابل تغییر نیست.</p>
+                        <ul className="list-disc list-inside space-y-2 text-gray-800 bg-gray-50 p-4 rounded-md">
+                            <li><code className="bg-gray-200 px-2 py-1 rounded-md font-mono text-base">ا</code> : استعلاجی (جزو روزهای موثر حقوق)</li>
+                            <li><code className="bg-gray-200 px-2 py-1 rounded-md font-mono text-base">م</code> : مرخصی (جزو روزهای موثر حقوق)</li>
+                            <li><code className="bg-gray-200 px-2 py-1 rounded-md font-mono text-base">غ</code> : غیبت (کسر از حقوق)</li>
+                            <li><code className="bg-gray-200 px-2 py-1 rounded-md font-mono text-base">ت</code> : تسویه حساب (فقط جهت نمایش)</li>
+                        </ul>
+                        <div className="divider my-6"></div>
+                        <CustomCodeEditor projectId={projectId} />
+                    </div>
+                </details>
+            </div>
             </>
             )}
 

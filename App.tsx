@@ -5,6 +5,7 @@ import AttendanceTable from './components/AttendanceTable';
 import Dashboard from './components/Dashboard';
 import Reports from './components/Reports';
 import SettingsPage from './components/SettingsPage';
+import PersonnelPage from './components/PersonnelPage'; // Import new component
 import { useAppStore } from './stores/useAppStore';
 import ToastContainer from './components/ToastContainer';
 
@@ -17,6 +18,8 @@ const App: React.FC = () => {
                 return <Dashboard />;
             case 'attendance':
                 return <AttendanceTable />;
+            case 'personnel': // Add new case
+                return <PersonnelPage />;
             case 'reports':
                 return <Reports />;
             case 'settings':

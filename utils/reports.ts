@@ -8,6 +8,7 @@ export interface ReportData {
     effectiveDays: number; // Total days worked (presence + leave + holiday/friday work)
     absentDays: number;
     leaveDays: number;
+    sickDays: number;
     overtimeHours: number;
     totalPayableDays: number; // The final multiplier for salary (e.g., 30.6)
     totalPay: number;
@@ -39,6 +40,7 @@ export const generateReport = (
         let presenceDays = 0;
         let absentDays = 0;
         let leaveDays = 0;
+        let sickDays = 0;
         let fridayWorkDays = 0;
         let holidayWorkDays = 0;
         let overtimeHours = 0;
@@ -72,13 +74,16 @@ export const generateReport = (
                     case 'م':
                         leaveDays++;
                         break;
+                    case 'ا':
+                        sickDays++;
+                        break;
                 }
             }
         }
 
         const baseDayCount = settings.baseDayCount > 0 ? settings.baseDayCount : 30;
         const dailyRate = employee.monthlySalary / baseDayCount;
-        const effectiveDays = presenceDays + leaveDays + fridayWorkDays + holidayWorkDays;
+        const effectiveDays = presenceDays + leaveDays + sickDays + fridayWorkDays + holidayWorkDays;
         const totalPayableDays = effectiveDays + (overtimeHours / 10.0);
         const basePay = totalPayableDays * dailyRate;
         const totalPay = basePay + bonus - advance - deduction;
@@ -90,6 +95,7 @@ export const generateReport = (
             effectiveDays,
             absentDays,
             leaveDays,
+            sickDays,
             overtimeHours,
             totalPayableDays,
             totalPay,
@@ -156,6 +162,7 @@ export const generateAttendanceSummary = (
                  switch (status.toLowerCase()) {
                     case 'غ': absentDays++; break;
                     case 'م': leaveDays++; break;
+                    case 'ا': sickDays++; break;
                     case 'ت': hasSettlement = true; break;
                 }
             }
@@ -165,7 +172,7 @@ export const generateAttendanceSummary = (
             notes = 'تسویه';
         }
 
-        const totalWorkedDays = presenceDays + leaveDays + fridayWorkDays + holidayWorkDays;
+        const totalWorkedDays = presenceDays + leaveDays + sickDays + fridayWorkDays + holidayWorkDays;
         
         summary.push({
             employeeId: employee.id,
