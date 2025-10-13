@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import AppHeader from './components/AppHeader';
 import AttendanceTable from './components/AttendanceTable';
@@ -8,9 +8,16 @@ import SettingsPage from './components/SettingsPage';
 import PersonnelPage from './components/PersonnelPage'; // Import new component
 import { useAppStore } from './stores/useAppStore';
 import ToastContainer from './components/ToastContainer';
+import { useThemeStore } from './stores/useThemeStore';
 
 const App: React.FC = () => {
     const { view } = useAppStore();
+    const { theme } = useThemeStore();
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+    }, [theme]);
+
 
     const renderView = () => {
         switch (view) {
@@ -30,11 +37,11 @@ const App: React.FC = () => {
     };
 
     return (
-        <div dir="rtl" className="flex h-screen bg-gray-100 font-sans" style={{ fontFamily: 'Vazirmatn, sans-serif' }}>
+        <div dir="rtl" className="flex h-screen bg-base-200 font-sans" style={{ fontFamily: 'Vazirmatn, sans-serif' }}>
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <AppHeader />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-6">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-base-100 p-4 md:p-6">
                     {renderView()}
                 </main>
             </div>

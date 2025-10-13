@@ -6,7 +6,7 @@ export interface Employee {
     firstName: string;
     lastName: string;
     position: string;
-    monthlySalary: number;
+    monthlySalary: number; // For project-based, this is the main salary. For official, it's the calculated total.
     isArchived: boolean;
     fatherName?: string;
     nationalId?: string;
@@ -18,6 +18,11 @@ export interface Employee {
     iban?: string;
     contractStartDate?: string;
     contractEndDate?: string;
+    // Fields for official (labor law) salary calculation
+    baseSalary?: number;
+    housingAllowance?: number;
+    childAllowance?: number;
+    otherBenefits?: number;
 }
 
 // Attendance for a single employee: { 'YYYY-MM-DD': 'status' }
@@ -38,7 +43,10 @@ export interface Settings {
     holidays: string[];
     dayTypeOverrides: { [date: string]: 'normal' | 'friday' | 'holiday' };
     currency: 'Toman' | 'Rial';
+    salaryMode: 'project' | 'official';
     customCodes: CustomAttendanceCode[];
+    isAiAssistantEnabled: boolean;
+    geminiApiKey: string;
 }
 
 export interface MonthlyFinancials {
@@ -145,4 +153,15 @@ export type SortDirection = 'asc' | 'desc' | null;
 export interface SortConfig<T> {
     key: keyof T | null;
     direction: SortDirection;
+}
+
+export interface Document {
+    id: string; // Unique ID for the document
+    projectId: string;
+    employeeId: string;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    data: string; // Base64 encoded file data
+    uploadedAt: string; // ISO string date
 }

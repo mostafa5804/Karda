@@ -15,6 +15,7 @@ import SortableTableHeader from './SortableTableHeader';
 import { ICONS } from '../constants';
 import { exportPersonnelToExcel, downloadPersonnelTemplate, importPersonnelFromExcel } from '../utils/excel';
 import BulkEditModal from './BulkEditModal';
+import { useDocumentStore } from '../stores/useDocumentStore';
 
 const PersonnelPage: React.FC = () => {
     const { currentProjectId } = useAppStore();
@@ -22,6 +23,7 @@ const PersonnelPage: React.FC = () => {
     const { getProjectData, addEmployee, updateEmployee, toggleEmployeeArchiveStatus, removeEmployee, upsertPersonnel, bulkUpdateEmployees } = useEmployeeStore();
     const { removeEmployeeFinancials } = useFinancialStore();
     const { removeEmployeeNotes } = useNotesStore();
+    const { removeEmployeeDocuments } = useDocumentStore();
     const { getSettings } = useSettingsStore();
     const addToast = useToastStore(state => state.addToast);
 
@@ -50,7 +52,8 @@ const PersonnelPage: React.FC = () => {
         );
     }, [employees, showArchived, searchQuery]);
 
-    const { items: sortedEmployees, requestSort, sortConfig } = useSortableTable(filteredEmployees, { key: 'lastName', direction: 'asc' });
+    // FIX: Explicitly provide the generic type to useSortableTable to prevent incorrect type inference.
+    const { items: sortedEmployees, requestSort, sortConfig } = useSortableTable<Employee>(filteredEmployees, { key: 'lastName', direction: 'asc' });
 
     const handleOpenDetailsModal = (employee?: Employee) => {
         setSelectedEmployee(employee);
@@ -79,11 +82,14 @@ const PersonnelPage: React.FC = () => {
         setSelectedIds(new Set());
     };
 
-    const handleConfirmRemove = () => {
+    const handleConfirmRemove = async () => {
         if (!employeeToRemove) return;
-        removeEmployee(projectId, employeeToRemove.id);
+        
+        await removeEmployeeDocuments(projectId, employeeToRemove.id);
         removeEmployeeFinancials(projectId, employeeToRemove.id);
         removeEmployeeNotes(projectId, employeeToRemove.id);
+        removeEmployee(projectId, employeeToRemove.id);
+
         addToast(`کارمند "${employeeToRemove.lastName} ${employeeToRemove.firstName}" برای همیشه حذف شد.`, 'success');
         setEmployeeToRemove(null);
     };
@@ -132,15 +138,15 @@ const PersonnelPage: React.FC = () => {
     };
     
     if (!currentProjectId) {
-        return <div className="text-center p-8 bg-white rounded-lg shadow">لطفاً ابتدا یک پروژه را انتخاب کنید.</div>
+        return <div className="text-center p-8 bg-base-100 rounded-lg shadow">لطفاً ابتدا یک پروژه را انتخاب کنید.</div>
     }
 
     const currentProjectName = projects.find(p => p.id === projectId)?.name || '';
 
     return (
         <div className="space-y-6">
-            <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center flex-wrap gap-4 no-print">
-                <h1 className="text-2xl font-bold text-gray-800">مدیریت پرسنل</h1>
+            <div className="bg-base-100 p-4 rounded-lg shadow flex justify-between items-center flex-wrap gap-4 no-print">
+                <h1 className="text-2xl font-bold">مدیریت پرسنل</h1>
                  <input
                     type="text"
                     placeholder="جستجو (نام، سمت، کد ملی)..."
@@ -177,28 +183,27 @@ const PersonnelPage: React.FC = () => {
                 </div>
             )}
 
-            <div className="bg-white rounded-lg shadow overflow-x-auto print-area personnel-print-area">
+            <div className="bg-base-100 rounded-lg shadow overflow-x-auto print-area personnel-print-area">
                  <h1 className="text-xl font-bold text-center p-4 hidden print:block">لیست پرسنل پروژه: {currentProjectName}</h1>
                 <table className="w-full text-sm text-right">
-                    <thead className="bg-gray-100 text-gray-600">
+                    <thead className="bg-base-200 text-base-content/80">
                         <tr>
                             <th className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" onChange={e => handleSelectAll(e.target.checked)} checked={sortedEmployees.length > 0 && selectedIds.size === sortedEmployees.length}/></th>
-                            {/* FIX: Added children to SortableTableHeader components to provide header text. */}
-                            <SortableTableHeader sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
-                            <SortableTableHeader sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
-                            <SortableTableHeader sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
-                            <SortableTableHeader sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            <SortableTableHeader sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className="p-3">حقوق ماهانه</SortableTableHeader>
-                            <SortableTableHeader sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className="p-3">پایان قرارداد</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className="p-3">حقوق ماهانه</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className="p-3">پایان قرارداد</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedEmployees.map(emp => {
                             const isExpired = emp.contractEndDate && new Date(emp.contractEndDate.replace(/-/g, '/')) < new Date();
-                            const rowClass = emp.isArchived ? 'bg-gray-100 text-gray-400' : (isExpired ? 'bg-red-50' : '');
+                            const rowClass = emp.isArchived ? 'bg-base-200 text-base-content/40' : (isExpired ? 'bg-red-50' : 'bg-base-100');
                             return (
-                                <tr key={emp.id} className={`border-t border-gray-200 hover:bg-gray-50 ${rowClass}`}>
+                                <tr key={emp.id} className={`border-t border-base-200 hover:bg-base-200 ${rowClass}`}>
                                     <td className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" checked={selectedIds.has(emp.id)} onChange={e => handleSelect(emp.id, e.target.checked)}/></td>
                                     <td className="p-3">{emp.lastName}</td>
                                     <td className="p-3">{emp.firstName}</td>
@@ -221,7 +226,7 @@ const PersonnelPage: React.FC = () => {
                     </tbody>
                 </table>
                 {sortedEmployees.length === 0 && (
-                    <div className="text-center p-6 text-gray-500">
+                    <div className="text-center p-6 text-base-content/60">
                         {searchQuery ? 'هیچ کارمندی با این مشخصات یافت نشد.' : (showArchived ? 'هیچ کارمند بایگانی شده‌ای وجود ندارد.' : 'هیچ کارمند فعالی وجود ندارد. برای شروع یک کارمند جدید اضافه کنید.')}
                     </div>
                 )}

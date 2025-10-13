@@ -138,7 +138,11 @@ const PERSONNEL_HEADERS = [
     { label: 'آدرس', key: 'address' },
     { label: 'شماره شبا', key: 'iban' },
     { label: 'سمت', key: 'position' },
-    { label: 'حقوق ماهانه', key: 'monthlySalary' },
+    { label: 'حقوق ماهانه کل', key: 'monthlySalary' },
+    { label: 'حقوق پایه', key: 'baseSalary' },
+    { label: 'حق مسکن', key: 'housingAllowance' },
+    { label: 'حق اولاد', key: 'childAllowance' },
+    { label: 'سایر مزایا', key: 'otherBenefits' },
     { label: 'تاریخ شروع قرارداد', key: 'contractStartDate' },
     { label: 'تاریخ پایان قرارداد', key: 'contractEndDate' },
 ];
@@ -158,7 +162,7 @@ export const exportPersonnelToExcel = (employees: Employee[], projectName: strin
 
 export const downloadPersonnelTemplate = () => {
     const headers = PERSONNEL_HEADERS.map(h => h.label);
-    const exampleRow = ['مثالی', 'علی', 'حسین', '0012345678', '09123456789', 'married', 1, 'completed', 'آدرس نمونه', '123456789012345678901234', 'برنامه‌نویس', 15000000, '1403-01-01', '1404-01-01'];
+    const exampleRow = ['مثالی', 'علی', 'حسین', '0012345678', '09123456789', 'married', 1, 'completed', 'آدرس نمونه', '123456789012345678901234', 'برنامه‌نویس', 15000000, 10000000, 1000000, 500000, 3500000, '1403-01-01', '1404-01-01'];
 
     const worksheet = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
     const workbook = XLSX.utils.book_new();
@@ -201,8 +205,17 @@ export const importPersonnelFromExcel = (file: File): Promise<Partial<Employee>[
                     if (!hasData) return null;
 
                     // Data type corrections
-                    if (newEmp.monthlySalary) newEmp.monthlySalary = Number(String(newEmp.monthlySalary).replace(/,/g, ''));
-                    if (newEmp.childrenCount) newEmp.childrenCount = Number(newEmp.childrenCount);
+                    const numericFields: (keyof Employee)[] = ['monthlySalary', 'childrenCount', 'baseSalary', 'housingAllowance', 'childAllowance', 'otherBenefits'];
+                    numericFields.forEach(field => {
+                        if (newEmp[field]) {
+                            (newEmp as any)[field] = Number(String(newEmp[field]).replace(/,/g, ''));
+                        }
+                    });
+
+                    // Recalculate monthlySalary if official components are present
+                    if (newEmp.baseSalary || newEmp.housingAllowance || newEmp.childAllowance || newEmp.otherBenefits) {
+                        newEmp.monthlySalary = (newEmp.baseSalary || 0) + (newEmp.housingAllowance || 0) + (newEmp.childAllowance || 0) + (newEmp.otherBenefits || 0);
+                    }
                     
                     if (!newEmp.nationalId) {
                         throw new Error(`ردیف ${index + 2}: کد ملی برای شناسایی کارمند اجباری است.`);

@@ -8,6 +8,7 @@ import { calculateAllDashboardData } from '../utils/dashboard';
 import { JALALI_MONTHS } from '../constants';
 import { getCurrentJalaliDate } from '../utils/calendar';
 import { formatCurrency } from '../utils/currency';
+import AiAssistantWidget from './AiAssistantWidget';
 
 const ICONS = {
     present: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.124-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.124-1.283.356-1.857m0 0a3.001 3.001 0 015.288 0M12 14a4 4 0 100-8 4 4 0 000 8z" /></svg>,
@@ -24,13 +25,13 @@ const StatCard: React.FC<{
     icon: React.ReactNode; 
     colorClass: string; 
 }> = ({ title, value, icon, colorClass }) => (
-    <div className="bg-white p-5 rounded-xl shadow-md flex items-center gap-4 transition-all hover:shadow-lg hover:-translate-y-1">
+    <div className="bg-base-100 p-5 rounded-xl shadow-md flex items-center gap-4 transition-all hover:shadow-lg hover:-translate-y-1">
         <div className={`rounded-full p-3 ${colorClass}`}>
             {icon}
         </div>
         <div>
-            <p className="text-3xl font-bold text-gray-800">{value}</p>
-            <h3 className="text-gray-500 font-semibold text-sm">{title}</h3>
+            <p className="text-3xl font-bold text-base-content">{value}</p>
+            <h3 className="text-base-content/70 font-semibold text-sm">{title}</h3>
         </div>
     </div>
 );
@@ -41,9 +42,9 @@ const MonthlyStat: React.FC<{ title: string; value: string | number; description
             {icon}
         </div>
         <div>
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <p className="text-xl font-bold text-gray-800">
-                {value} <span className="text-sm font-normal text-gray-600">{description}</span>
+            <p className="text-sm font-medium text-base-content/60">{title}</p>
+            <p className="text-xl font-bold text-base-content">
+                {value} <span className="text-sm font-normal text-base-content/80">{description}</span>
             </p>
         </div>
     </div>
@@ -52,7 +53,7 @@ const MonthlyStat: React.FC<{ title: string; value: string | number; description
 const ChartWrapper: React.FC<{ children: React.ReactNode; hasData: boolean; noDataMessage: string; className?: string }> = ({ children, hasData, noDataMessage, className }) => (
     <div className={`relative ${className}`}>
         {!hasData && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-base-content/40 z-10">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
                 <p className="text-sm">{noDataMessage}</p>
             </div>
@@ -157,7 +158,7 @@ const Dashboard: React.FC = () => {
     const [todayY, todayM, todayD] = getCurrentJalaliDate();
 
     if (!currentProjectId) {
-        return <div className="text-center p-8 bg-white rounded-lg shadow">لطفاً ابتدا یک پروژه را از منوی بالا انتخاب کنید یا در صفحه تنظیمات یک پروژه جدید بسازید.</div>
+        return <div className="text-center p-8 bg-base-100 rounded-lg shadow">لطفاً ابتدا یک پروژه را از منوی بالا انتخاب کنید یا در صفحه تنظیمات یک پروژه جدید بسازید.</div>
     }
 
     const { dailyStats, monthlyStats, projectWideStats, salaryDistribution, employeeTrend } = allDashboardData;
@@ -165,19 +166,21 @@ const Dashboard: React.FC = () => {
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-center flex-wrap gap-4">
-                <h1 className="text-2xl font-bold text-gray-800">داشبورد پروژه: {currentProject?.name}</h1>
-                <div className="flex items-center gap-2 bg-white p-1 rounded-full shadow-sm">
+                <h1 className="text-2xl font-bold text-base-content">داشبورد پروژه: {currentProject?.name}</h1>
+                <div className="flex items-center gap-2 bg-base-100 p-1 rounded-full shadow-sm">
                     <button onClick={() => setDashboardDateFilter({mode: 'all'})} className={`btn btn-sm ${dashboardDateFilter.mode === 'all' ? 'btn-primary' : 'btn-ghost'} rounded-full`}>کل پروژه</button>
                     <button onClick={() => setDashboardDateFilter({mode: 'month', year: selectedYear, month: selectedMonth})} className={`btn btn-sm ${dashboardDateFilter.mode === 'month' ? 'btn-primary' : 'btn-ghost'} rounded-full`}>
                         {JALALI_MONTHS[selectedMonth - 1]} {selectedYear}
                     </button>
                 </div>
             </div>
+
+            {settings.isAiAssistantEnabled && <AiAssistantWidget />}
             
             <div>
-                <h2 className="text-xl font-bold text-gray-700 mb-4">
+                <h2 className="text-xl font-bold text-base-content/80 mb-4">
                     خلاصه وضعیت امروز
-                    <span className="text-sm font-normal text-gray-500 mr-2">({`${todayD} ${JALALI_MONTHS[todayM - 1]}`})</span>
+                    <span className="text-sm font-normal text-base-content/60 mr-2">({`${todayD} ${JALALI_MONTHS[todayM - 1]}`})</span>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard title="حاضر" value={dailyStats.present} icon={ICONS.present} colorClass="bg-green-100" />
@@ -186,11 +189,11 @@ const Dashboard: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-md">
-                <h2 className="text-xl font-semibold mb-2 border-b pb-3">
+            <div className="bg-base-100 p-6 rounded-xl shadow-md">
+                <h2 className="text-xl font-semibold mb-2 border-b pb-3 border-base-300">
                     {dashboardDateFilter.mode === 'all' ? 'آمار کلی پروژه (از ابتدا تا کنون)' : `آمار ماه ${JALALI_MONTHS[dashboardDateFilter.month! - 1]} ${dashboardDateFilter.year}`}
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-200 divide-x-reverse">
+                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-base-200 divide-x-reverse">
                     {dashboardDateFilter.mode === 'all' && projectWideStats && (
                         <>
                            <MonthlyStat title="جمع کل حقوق پرداختی" value={formatCurrency(projectWideStats.totalSalaryPaid, settings.currency)} description={settings.currency === 'Rial' ? 'ریال' : 'تومان'} icon={ICONS.money} />
@@ -209,13 +212,13 @@ const Dashboard: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-3 bg-white p-6 rounded-xl shadow-md">
+                <div className="lg:col-span-3 bg-base-100 p-6 rounded-xl shadow-md">
                      <h2 className="text-xl font-semibold mb-4">روند تعداد کارمندان</h2>
                       <ChartWrapper hasData={employeeTrend && employeeTrend.data.length > 0} noDataMessage="داده‌ای برای نمایش روند کارمندان وجود ندارد." className="h-64">
                         <canvas ref={trendChartRef}></canvas>
                     </ChartWrapper>
                 </div>
-                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+                <div className="lg:col-span-2 bg-base-100 p-6 rounded-xl shadow-md">
                     <h2 className="text-xl font-semibold mb-4">توزیع حقوق ماه</h2>
                      <ChartWrapper
                         hasData={salaryDistribution && salaryDistribution.data.length > 0}

@@ -22,7 +22,10 @@ const initialSettings: Settings = {
     holidays: [],
     dayTypeOverrides: {},
     currency: 'Toman',
+    salaryMode: 'project',
     customCodes: [],
+    isAiAssistantEnabled: false,
+    geminiApiKey: '',
 };
 
 export const useSettingsStore = create(
@@ -32,10 +35,10 @@ export const useSettingsStore = create(
                 'default': initialSettings,
             },
             getSettings: (projectId) => {
-                return get().projectSettings[projectId] || initialSettings;
+                return { ...initialSettings, ...(get().projectSettings[projectId] || {}) };
             },
             updateSettings: (projectId, newSettings) => set((state) => {
-                const currentSettings = state.projectSettings[projectId] || initialSettings;
+                const currentSettings = state.getSettings(projectId);
                 return {
                     projectSettings: {
                         ...state.projectSettings,
@@ -44,7 +47,7 @@ export const useSettingsStore = create(
                 };
             }),
             setDayOverride: (projectId, date, type) => set((state) => {
-                const currentSettings = state.projectSettings[projectId] || initialSettings;
+                const currentSettings = state.getSettings(projectId);
                 const newOverrides = { ...currentSettings.dayTypeOverrides };
                 if (type) {
                     newOverrides[date] = type;

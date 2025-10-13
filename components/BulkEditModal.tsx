@@ -17,22 +17,33 @@ const initialFormState: Partial<UpdatableFields> = {
     militaryServiceStatus: undefined,
     contractStartDate: '',
     contractEndDate: '',
+    baseSalary: 0,
+    housingAllowance: 0,
+    childAllowance: 0,
+    otherBenefits: 0,
 };
+
+const initialFieldsToUpdateState: Record<keyof UpdatableFields, boolean> = {
+    position: false,
+    monthlySalary: false,
+    phone: false,
+    maritalStatus: false,
+    childrenCount: false,
+    militaryServiceStatus: false,
+    address: false,
+    iban: false,
+    contractStartDate: false,
+    contractEndDate: false,
+    baseSalary: false,
+    housingAllowance: false,
+    childAllowance: false,
+    otherBenefits: false,
+};
+
 
 const BulkEditModal: React.FC<BulkEditModalProps> = ({ isOpen, onClose, onSave, employeeCount }) => {
     const [formData, setFormData] = useState(initialFormState);
-    const [fieldsToUpdate, setFieldsToUpdate] = useState<Record<keyof UpdatableFields, boolean>>({
-        position: false,
-        monthlySalary: false,
-        phone: false,
-        maritalStatus: false,
-        childrenCount: false,
-        militaryServiceStatus: false,
-        address: false,
-        iban: false,
-        contractStartDate: false,
-        contractEndDate: false,
-    });
+    const [fieldsToUpdate, setFieldsToUpdate] = useState(initialFieldsToUpdateState);
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     useEffect(() => {
@@ -48,11 +59,7 @@ const BulkEditModal: React.FC<BulkEditModalProps> = ({ isOpen, onClose, onSave, 
         // Reset state when modal opens
         if (isOpen) {
             setFormData(initialFormState);
-            setFieldsToUpdate({
-                position: false, monthlySalary: false, phone: false, maritalStatus: false,
-                childrenCount: false, militaryServiceStatus: false, address: false, iban: false,
-                contractStartDate: false, contractEndDate: false
-            });
+            setFieldsToUpdate(initialFieldsToUpdateState);
         }
     }, [isOpen]);
 
@@ -89,7 +96,7 @@ const BulkEditModal: React.FC<BulkEditModalProps> = ({ isOpen, onClose, onSave, 
                     <h3 className="font-bold text-lg mb-4 border-b pb-2">
                         ویرایش گروهی {employeeCount} کارمند
                     </h3>
-                    <p className="text-sm text-gray-500 mb-4">فقط فیلدهایی که تیک آن‌ها را بزنید برای کارمندان انتخاب شده تغییر خواهد کرد.</p>
+                    <p className="text-sm text-base-content/70 mb-4">فقط فیلدهایی که تیک آن‌ها را بزنید برای کارمندان انتخاب شده تغییر خواهد کرد.</p>
 
                     <div className="space-y-4 max-h-[60vh] overflow-y-auto p-2">
                         {/* Position */}
