@@ -35,30 +35,37 @@ const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     
     return (
         <>
-            <h3 className="font-semibold text-gray-700 mb-2">کدهای کارکرد</h3>
+            <h3 className="font-semibold text-gray-700 mb-2">کدهای کارکرد و رنگ‌بندی</h3>
              <p className="text-sm text-gray-600 mb-4">
-                کدهای تک-حرفی برای ثبت وضعیت‌های مختلف تعریف کنید. کدهای سیستمی (مانند غیبت و مرخصی) قابل حذف نیستند اما می‌توانید رنگ و توضیحات آن‌ها را ویرایش کنید.
+                کدهای تک-حرفی برای ثبت وضعیت‌ها و رنگ پس‌زمینه ستون‌های خاص را مدیریت کنید. کدهای سیستمی قابل حذف نیستند اما می‌توانید رنگ و توضیحات آن‌ها را ویرایش کنید.
              </p>
             <div className="space-y-2 mb-4">
-                {settings.customCodes.sort((a,b) => (a.isSystemCode ? -1 : 1) - (b.isSystemCode ? -1 : 1)).map(code => (
-                    <div key={code.id} className="grid grid-cols-12 gap-2 items-center">
-                        <input type="text" value={code.char} maxLength={1} onChange={e => updateCustomCode(projectId, code.id, { char: e.target.value })} className="input input-bordered input-sm col-span-1 text-center font-bold" style={{backgroundColor: code.color}} disabled={code.isSystemCode} />
-                        <input type="text" value={code.description} onChange={e => updateCustomCode(projectId, code.id, { description: e.target.value })} className="input input-bordered input-sm col-span-6" />
-                        <input type="color" value={code.color} onChange={e => updateCustomCode(projectId, code.id, { color: e.target.value })} className="input input-sm p-1 col-span-2" />
-                        <div className="col-span-3">
-                        {!code.isSystemCode ? (
-                            <button onClick={() => removeCustomCode(projectId, code.id)} className="btn btn-sm btn-ghost text-red-500">حذف</button>
-                        ) : (
-                            <span className="text-xs text-gray-400 p-2">سیستمی</span>
-                        )}
+                {settings.customCodes.sort((a,b) => (a.isSystemCode ? -1 : 1) - (b.isSystemCode ? -1 : 1)).map(code => {
+                    const isSpecialSystemCode = code.id.startsWith('system-friday') || code.id.startsWith('system-holiday');
+                    return (
+                        <div key={code.id} className="grid grid-cols-12 gap-2 items-center">
+                             {isSpecialSystemCode ? (
+                                <div className="input-sm col-span-2 text-center font-bold flex items-center justify-center text-xs bg-base-200 rounded-md h-full">{code.char}</div>
+                             ) : (
+                                <input type="text" value={code.char} maxLength={1} onChange={e => updateCustomCode(projectId, code.id, { char: e.target.value })} className="input input-bordered input-sm col-span-2 text-center font-bold" style={{backgroundColor: code.color}} disabled={code.isSystemCode} />
+                             )}
+                            <input type="text" value={code.description} onChange={e => updateCustomCode(projectId, code.id, { description: e.target.value })} className="input input-bordered input-sm col-span-5" />
+                            <input type="color" value={code.color} onChange={e => updateCustomCode(projectId, code.id, { color: e.target.value })} className="input input-sm p-1 col-span-2" />
+                            <div className="col-span-3">
+                            {!code.isSystemCode ? (
+                                <button onClick={() => removeCustomCode(projectId, code.id)} className="btn btn-sm btn-ghost text-red-500">حذف</button>
+                            ) : (
+                                <span className="text-xs text-gray-400 p-2">سیستمی</span>
+                            )}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
 
              <div className="grid grid-cols-12 gap-2 items-center pt-4 border-t">
-                <input type="text" placeholder="کد" value={newCode.char} maxLength={1} onChange={e => setNewCode(c => ({...c, char: e.target.value}))} className="input input-bordered input-sm col-span-1 text-center font-bold" />
-                <input type="text" placeholder="توضیحات" value={newCode.description} onChange={e => setNewCode(c => ({...c, description: e.target.value}))} className="input input-bordered input-sm col-span-6" />
+                <input type="text" placeholder="کد" value={newCode.char} maxLength={1} onChange={e => setNewCode(c => ({...c, char: e.target.value}))} className="input input-bordered input-sm col-span-2 text-center font-bold" />
+                <input type="text" placeholder="توضیحات" value={newCode.description} onChange={e => setNewCode(c => ({...c, description: e.target.value}))} className="input input-bordered input-sm col-span-5" />
                 <input type="color" value={newCode.color} onChange={e => setNewCode(c => ({...c, color: e.target.value}))} className="input input-sm p-1 col-span-2" />
                 <button onClick={handleAddCode} className="btn btn-sm btn-secondary col-span-3">افزودن</button>
             </div>

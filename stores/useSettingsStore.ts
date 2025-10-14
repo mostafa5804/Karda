@@ -29,6 +29,8 @@ const initialSettings: Settings = {
         { id: 'system-m', char: 'م', description: 'مرخصی (با حقوق)', color: '#A7F3D0', isSystemCode: true },
         { id: 'system-a', char: 'ا', description: 'استعلاجی (با حقوق)', color: '#FDE68A', isSystemCode: true },
         { id: 'system-t', char: 'ت', description: 'تسویه حساب', color: '#E9D5FF', isSystemCode: true },
+        { id: 'system-friday-work', char: 'جمعه', description: 'رنگ پس‌زمینه ستون جمعه', color: '#dbfde8', isSystemCode: true },
+        { id: 'system-holiday-work', char: 'تعطیل', description: 'رنگ پس‌زمینه ستون تعطیل', color: '#fe F9c3', isSystemCode: true },
     ],
     isAiAssistantEnabled: false,
     geminiApiKey: '',
@@ -47,9 +49,9 @@ export const useSettingsStore = create(
                 // Ensure system codes are always present
                 const baseCodes = [...initialSettings.customCodes];
                 const customCodes = projectSpecificSettings.customCodes || [];
-                const codeChars = new Set(customCodes.map(c => c.char));
+                const codeChars = new Set(customCodes.map(c => c.id));
                 baseCodes.forEach(bc => {
-                    if (!codeChars.has(bc.char)) {
+                    if (!codeChars.has(bc.id)) {
                         customCodes.push(bc);
                     }
                 });

@@ -104,20 +104,21 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
     return (
         <div className="p-4 space-y-4">
             <div 
-                className={`relative p-4 border-2 border-dashed rounded-lg transition-colors text-center ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                className={`relative p-4 border-2 border-dashed rounded-lg transition-colors text-center cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
+                onClick={() => !isUploading && fileInputRef.current?.click()}
                 onDragOver={handleDragOver}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileSelect} multiple={false}/>
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileSelect} multiple={false} disabled={isUploading}/>
                 <div className="flex flex-col items-center justify-center pointer-events-none">
                     {ICONS.upload}
                     <p className="mt-2 text-sm text-gray-600">
                         فایل مدرک را به اینجا بکشید و رها کنید، یا
-                        <button type="button" className="link link-primary mx-1" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} disabled={isUploading}>
+                        <span className="link link-primary mx-1">
                             انتخاب کنید
-                        </button>
+                        </span>
                     </p>
                     {isUploading && <div className="mt-2"><span className="loading loading-spinner text-secondary"></span><p>در حال بارگذاری...</p></div>}
                 </div>

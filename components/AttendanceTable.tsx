@@ -83,14 +83,6 @@ const AttendanceTable: React.FC = () => {
         setHeaderMenu(null);
     };
 
-    const getDayCellStyle = (value: string): React.CSSProperties => {
-        const customCode = customCodeMap.get(String(value).toLowerCase());
-        if (customCode) {
-            return { backgroundColor: customCode.color, color: getContrastingTextColor(customCode.color) };
-        }
-        return {};
-    };
-
     if (!currentProjectId) {
          return <div className="text-center p-8 bg-white rounded-lg shadow">لطفاً ابتدا یک پروژه را از منوی بالا انتخاب کنید یا در صفحه تنظیمات یک پروژه جدید بسازید.</div>
     }
@@ -144,8 +136,32 @@ const AttendanceTable: React.FC = () => {
                     const date = getFormattedDate(selectedYear, selectedMonth, day);
                     const value = attendance[employee.id]?.[date] || '';
                     const note = getNote(projectId, employee.id, date);
+
+                    const cellStyle: React.CSSProperties = {};
+                    
+                    // 1. Value-based styling (highest priority)
+                    const customCode = customCodeMap.get(String(value).toLowerCase());
+                    if (customCode) {
+                        cellStyle.backgroundColor = customCode.color;
+                        cellStyle.color = getContrastingTextColor(customCode.color);
+                    } else {
+                        // 2. Column-based styling (lower priority)
+                        const dayOfWeek = (firstDay + i) % 7;
+                        const override = settings.dayTypeOverrides[date];
+                        const isFriday = override === 'friday' || (!override && dayOfWeek === 6);
+                        const isHoliday = override === 'holiday' || (!override && settings.holidays.includes(date));
+                        
+                        if (isFriday) {
+                            const color = settings.customCodes.find(c => c.id === 'system-friday-work')?.color;
+                            if (color) cellStyle.backgroundColor = color;
+                        } else if (isHoliday) {
+                            const color = settings.customCodes.find(c => c.id === 'system-holiday-work')?.color;
+                            if (color) cellStyle.backgroundColor = color;
+                        }
+                    }
+
                     return (
-                        <td key={date} className="p-0 border border-gray-300 relative group" style={getDayCellStyle(value)}>
+                        <td key={date} className="p-0 border border-gray-300 relative group" style={cellStyle}>
                             <input
                                 type="text"
                                 defaultValue={value}
