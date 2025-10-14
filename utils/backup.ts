@@ -33,7 +33,7 @@ export const runBackup = async ({ isAuto }: { isAuto: boolean }): Promise<{ succ
         const dateStr = new Date().toLocaleDateString('fa-IR-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
         const timeStr = new Date().toLocaleTimeString('en-GB').replace(/:/g, '-');
         
-        const fileName = `karda-backup-${dateStr}-${timeStr}.json`;
+        const fileName = `karkard-backup-${dateStr}-${timeStr}.json`;
         const filePath = isAuto ? `backups/auto/${fileName}` : `backups/${fileName}`;
         
         await fileSystemManager.writeFile(filePath, JSON.stringify(backupData, null, 2));

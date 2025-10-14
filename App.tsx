@@ -27,7 +27,7 @@ const DirectorySetupPrompt: React.FC<{ error?: string }> = ({ error }) => {
         <div className="h-screen w-screen bg-base-200 flex items-center justify-center p-4">
             <div className="max-w-2xl text-center bg-base-100 p-10 rounded-2xl shadow-2xl">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-primary mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                <h1 className="text-3xl font-bold mb-4">به سامانه کاردا خوش آمدید</h1>
+                <h1 className="text-3xl font-bold mb-4">به سامانه کارکرد خوش آمدید</h1>
                 <p className="mb-6 text-base-content/80">
                     برای شروع و جهت تضمین امنیت و پایداری اطلاعات شما، لطفاً یک پوشه روی کامپیوتر خود برای ذخیره‌سازی داده‌های برنامه (مانند اطلاعات پرسنل، مدارک و فایل‌های پشتیبان) انتخاب کنید.
                     تمام اطلاعات به صورت محلی در این پوشه ذخیره خواهد شد.

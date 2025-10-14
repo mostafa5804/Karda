@@ -14,7 +14,7 @@ const AppHeader: React.FC = () => {
     }, [selectedYear]);
 
     const currentProject = projects.find(p => p.id === currentProjectId);
-    const companyName = currentProject?.companyName || 'KARDA';
+    const companyName = currentProject?.companyName || 'کارکرد';
     const companyLogo = currentProject?.companyLogo || '';
 
     const handleMonthSelect = (month: number) => {

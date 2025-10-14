@@ -211,7 +211,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
     const handleRestoreRequest = async () => {
         try {
             const [fileHandle] = await (window as any).showOpenFilePicker({
-                types: [{ description: 'Karda Backup Files', accept: { 'application/json': ['.json'] } }],
+                types: [{ description: 'Karkard Backup Files', accept: { 'application/json': ['.json'] } }],
             });
             const file = await fileHandle.getFile();
             const text = await file.text();

@@ -17,8 +17,16 @@ import { exportPersonnelToExcel, downloadPersonnelTemplate, importPersonnelFromE
 import BulkEditModal from './BulkEditModal';
 import { useDocumentStore } from '../stores/useDocumentStore';
 
+const ACTION_ICONS = {
+    report: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+    archive: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 5h14" /></svg>,
+    unarchive: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
+    delete: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+};
+
+
 const PersonnelPage: React.FC = () => {
-    const { currentProjectId } = useAppStore();
+    const { currentProjectId, setView, setReportView, setSelectedEmployeeIdForReport } = useAppStore();
     const { projects } = useCompanyStore();
     const { getProjectData, addEmployee, updateEmployee, toggleEmployeeArchiveStatus, removeEmployee, upsertPersonnel, bulkUpdateEmployees } = useEmployeeStore();
     const { removeEmployeeFinancials } = useFinancialStore();
@@ -136,6 +144,12 @@ const PersonnelPage: React.FC = () => {
         setImportedData(null);
     };
     
+    const handleViewIndividualReport = (employeeId: string) => {
+        setView('reports');
+        setReportView('individual');
+        setSelectedEmployeeIdForReport(employeeId);
+    };
+
     if (!currentProjectId) {
         return <div className="text-center p-8 bg-base-100 rounded-lg shadow">لطفاً ابتدا یک پروژه را انتخاب کنید.</div>
     }
@@ -214,13 +228,25 @@ const PersonnelPage: React.FC = () => {
                                     <td className="p-3">{formatCurrency(emp.monthlySalary, settings.currency)}</td>
                                     <td className={`p-3 ${emp.settlementDate ? 'font-bold text-purple-600' : ''}`}>{emp.settlementDate || '-'}</td>
                                     <td className="p-3 text-center whitespace-nowrap no-print">
-                                        <button onClick={() => handleOpenDetailsModal(emp)} className="btn btn-xs btn-ghost text-blue-600">ویرایش</button>
-                                        <button onClick={() => toggleEmployeeArchiveStatus(projectId, emp.id)} className="btn btn-xs btn-ghost text-yellow-600">
-                                            {emp.isArchived ? 'فعال‌سازی' : 'بایگانی'}
-                                        </button>
-                                        {emp.isArchived && (
-                                            <button onClick={() => setEmployeeToRemove(emp)} className="btn btn-xs btn-ghost text-red-600">حذف</button>
-                                        )}
+                                        <div className="flex items-center justify-center gap-1">
+                                            <button onClick={() => handleOpenDetailsModal(emp)} className="btn btn-xs btn-ghost text-blue-600" title="ویرایش جزئیات">ویرایش</button>
+                                            
+                                            {!emp.isArchived && (
+                                                <button onClick={() => handleViewIndividualReport(emp.id)} className="btn btn-xs btn-ghost text-green-600" title="مشاهده گزارش فردی">
+                                                    {ACTION_ICONS.report}
+                                                </button>
+                                            )}
+
+                                            <button onClick={() => toggleEmployeeArchiveStatus(projectId, emp.id)} className="btn btn-xs btn-ghost text-yellow-600" title={emp.isArchived ? 'فعال‌سازی' : 'بایگانی'}>
+                                                {emp.isArchived ? ACTION_ICONS.unarchive : ACTION_ICONS.archive}
+                                            </button>
+                                            
+                                            {emp.isArchived && (
+                                                <button onClick={() => setEmployeeToRemove(emp)} className="btn btn-xs btn-ghost text-red-600" title="حذف دائمی">
+                                                    {ACTION_ICONS.delete}
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             );

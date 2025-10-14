@@ -1,6 +1,6 @@
-// Karda Service Worker for Offline Capability
+// Karkard Service Worker for Offline Capability
 
-const CACHE_NAME = 'karda-cache-v1';
+const CACHE_NAME = 'karkard-cache-v1';
 
 // On install, cache the core application shell files.
 self.addEventListener('install', event => {
