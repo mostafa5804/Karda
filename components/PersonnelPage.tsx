@@ -5,7 +5,7 @@ import { useFinancialStore } from '../stores/useFinancialStore';
 import { useNotesStore } from '../stores/useNotesStore';
 import { useToastStore } from '../stores/useToastStore';
 import { useCompanyStore } from '../stores/useCompanyStore';
-import { Employee } from '../types';
+import { Employee, PersonnelColumnKey } from '../types';
 import EmployeeDetailsModal from './EmployeeDetailsModal';
 import ConfirmationModal from './ConfirmationModal';
 import { formatCurrency } from '../utils/currency';
@@ -32,12 +32,13 @@ const PersonnelPage: React.FC = () => {
     const { removeEmployeeFinancials } = useFinancialStore();
     const { removeEmployeeNotes } = useNotesStore();
     const { removeEmployeeDocuments } = useDocumentStore();
-    const { getSettings } = useSettingsStore();
+    const { getSettings, updatePersonnelVisibleColumns } = useSettingsStore();
     const addToast = useToastStore(state => state.addToast);
 
     const projectId = currentProjectId || 'default';
     const { employees } = getProjectData(projectId);
     const settings = getSettings(projectId);
+    const visibleColumns = settings.personnelVisibleColumns;
 
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
@@ -61,6 +62,13 @@ const PersonnelPage: React.FC = () => {
     }, [employees, showArchived, searchQuery]);
 
     const { items: sortedEmployees, requestSort, sortConfig } = useSortableTable<Employee>(filteredEmployees, { key: 'lastName', direction: 'asc' });
+
+    const optionalColumns: { key: PersonnelColumnKey; label: string }[] = [
+        { key: 'monthlySalary', label: 'حقوق ماهانه' },
+        { key: 'contractStartDate', label: 'تاریخ شروع قرارداد' },
+        { key: 'contractEndDate', label: 'تاریخ پایان قرارداد' },
+        { key: 'settlementDate', label: 'تاریخ تسویه' },
+    ];
 
     const handleOpenDetailsModal = (employee?: Employee) => {
         setSelectedEmployee(employee);
@@ -169,7 +177,7 @@ const PersonnelPage: React.FC = () => {
                 />
                 <div className="flex items-center gap-2 flex-wrap">
                     <button onClick={handlePrint} className="btn btn-outline">{ICONS.print} <span className="mr-1">چاپ</span></button>
-                    <div className="dropdown">
+                    <div className="dropdown dropdown-end">
                         <label tabIndex={0} className="btn btn-outline">عملیات اکسل</label>
                         <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                             <li><a onClick={() => fileImportInputRef.current?.click()}>{ICONS.upload}<span className="mr-2">ورود از اکسل</span></a></li>
@@ -179,6 +187,24 @@ const PersonnelPage: React.FC = () => {
                         </ul>
                     </div>
                      <input type="file" accept=".xlsx, .xls" className="hidden" ref={fileImportInputRef} onChange={handleImport}/>
+                    <div className="dropdown dropdown-end">
+                        <label tabIndex={0} className="btn btn-outline">نمایش ستون‌ها</label>
+                        <div tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-60" onClick={e => e.stopPropagation()}>
+                           {optionalColumns.map(({key, label}) => (
+                                <li key={key}>
+                                    <label className="label cursor-pointer py-1">
+                                        <span className="label-text">{label}</span> 
+                                        <input 
+                                            type="checkbox" 
+                                            checked={!!visibleColumns?.[key]} 
+                                            onChange={e => updatePersonnelVisibleColumns(projectId, key, e.target.checked)}
+                                            className="checkbox checkbox-sm" 
+                                        />
+                                    </label>
+                                </li>
+                           ))}
+                        </div>
+                    </div>
                     <div className="form-control">
                         <label className="label cursor-pointer gap-2">
                             <span className="label-text">بایگانی</span>
@@ -202,13 +228,15 @@ const PersonnelPage: React.FC = () => {
                     <thead className="bg-base-200 text-base-content/80">
                         <tr>
                             <th className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" onChange={e => handleSelectAll(e.target.checked)} checked={sortedEmployees.length > 0 && selectedIds.size === sortedEmployees.length}/></th>
-                            {/* FIX: Added children to SortableTableHeader components to provide header text. */}
+                            {/* FIX: Removed explicit generic type `<Employee>` from SortableTableHeader to allow TypeScript to correctly infer types from props, which resolves the 'children' prop error. */}
                             <SortableTableHeader sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
                             <SortableTableHeader sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
                             <SortableTableHeader sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
                             <SortableTableHeader sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            <SortableTableHeader sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className="p-3">حقوق ماهانه</SortableTableHeader>
-                            <SortableTableHeader sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className="p-3">تاریخ تسویه</SortableTableHeader>
+                            <SortableTableHeader sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>حقوق ماهانه</SortableTableHeader>
+                            <SortableTableHeader sortKey="contractStartDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>شروع قرارداد</SortableTableHeader>
+                            <SortableTableHeader sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>پایان قرارداد</SortableTableHeader>
+                            <SortableTableHeader sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''}`}>تاریخ تسویه</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
                     </thead>
@@ -225,8 +253,10 @@ const PersonnelPage: React.FC = () => {
                                     <td className="p-3">{emp.firstName}</td>
                                     <td className="p-3 font-mono">{emp.nationalId}</td>
                                     <td className="p-3">{emp.position}</td>
-                                    <td className="p-3">{formatCurrency(emp.monthlySalary, settings.currency)}</td>
-                                    <td className={`p-3 ${emp.settlementDate ? 'font-bold text-purple-600' : ''}`}>{emp.settlementDate || '-'}</td>
+                                    <td className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>{formatCurrency(emp.monthlySalary, settings.currency)}</td>
+                                    <td className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>{emp.contractStartDate || '-'}</td>
+                                    <td className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>{emp.contractEndDate || '-'}</td>
+                                    <td className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''} ${emp.settlementDate ? 'font-bold text-purple-600' : ''}`}>{emp.settlementDate || '-'}</td>
                                     <td className="p-3 text-center whitespace-nowrap no-print">
                                         <div className="flex items-center justify-center gap-1">
                                             <button onClick={() => handleOpenDetailsModal(emp)} className="btn btn-xs btn-ghost text-blue-600" title="ویرایش جزئیات">ویرایش</button>

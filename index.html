@@ -98,6 +98,44 @@
         .print-area h1, .print-area h2, .print-area p {
             text-align: center;
         }
+
+        /* Monochrome & better border styles */
+        .print-monochrome {
+            -webkit-print-color-adjust: economy !important;
+            print-color-adjust: economy !important;
+            color: #000 !important;
+        }
+        .print-monochrome * {
+            color: #000 !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+        }
+        .print-monochrome th, .print-monochrome td {
+            border: 0.5pt solid #999 !important; /* Softer, consistent borders */
+        }
+        .print-monochrome thead tr {
+            background-color: #f2f2f2 !important; /* Light gray for header row */
+        }
+        .print-monochrome .font-bold {
+            font-weight: bold;
+        }
+
+        /* Specific styles for AttendanceSummaryReport */
+        .summary-report-print th.vertical-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            white-space: nowrap;
+            padding: 8px 4px !important;
+            vertical-align: middle;
+            transform: rotate(180deg);
+        }
+        .summary-report-print td.job-title-cell {
+            white-space: nowrap !important;
+        }
+        .summary-report-print .numeric-col {
+            width: 5%;
+        }
       }
     </style>
 <script type="importmap">

@@ -5,6 +5,7 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { formatCurrency } from '../utils/currency';
 import { useDocumentStore } from '../stores/useDocumentStore';
 import { useToastStore } from '../stores/useToastStore';
+import { fileSystemManager } from '../utils/db';
 
 const ICONS = {
     upload: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
@@ -16,6 +17,7 @@ const ICONS = {
 // Sub-component for managing documents
 const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ employee, projectId }) => {
     const { addDocument, getDocumentsForEmployee, deleteDocument, getDownloadableFile } = useDocumentStore();
+    const isFsReady = fileSystemManager.hasHandle();
     const documents = getDocumentsForEmployee(projectId, employee.id).sort((a,b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
     const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
@@ -24,6 +26,14 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
 
     const handleFileUpload = async (file: File | null | undefined) => {
         if (!file) return;
+
+        const allowedTypes = ['application/pdf'];
+        const isImage = file.type.startsWith('image/');
+        if (!isImage && !allowedTypes.includes(file.type)) {
+            addToast('فرمت فایل مجاز نیست. لطفاً فقط فایل‌های PDF یا عکس را بارگذاری کنید.', 'error');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
 
         setIsUploading(true);
         try {
@@ -101,6 +111,17 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
         await handleFileUpload(file);
     };
 
+    if (!isFsReady) {
+        return (
+            <div className="p-4 space-y-4 text-center">
+                <div className="alert alert-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <span>برای استفاده از قابلیت مدیریت مدارک، ابتدا باید یک پوشه برای ذخیره‌سازی داده‌ها در صفحه **تنظیمات** انتخاب کنید.</span>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-4 space-y-4">
             <div 
@@ -111,11 +132,11 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileSelect} multiple={false} disabled={isUploading}/>
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileSelect} multiple={false} disabled={isUploading} accept="image/*,application/pdf"/>
                 <div className="flex flex-col items-center justify-center pointer-events-none">
                     {ICONS.upload}
                     <p className="mt-2 text-sm text-gray-600">
-                        فایل مدرک را به اینجا بکشید و رها کنید، یا
+                        فایل PDF یا عکس مدرک را به اینجا بکشید و رها کنید، یا
                         <span className="link link-primary mx-1">
                             انتخاب کنید
                         </span>

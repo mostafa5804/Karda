@@ -15,36 +15,10 @@ import { useSettingsStore } from './stores/useSettingsStore';
 import { runBackup } from './utils/backup';
 import { useToastStore } from './stores/useToastStore';
 
-const DirectorySetupPrompt: React.FC<{ error?: string }> = ({ error }) => {
-    const { setView } = useAppStore();
-    
-    useEffect(() => {
-        // Force view to settings if the prompt is shown
-        setView('settings');
-    }, [setView]);
-
-    return (
-        <div className="h-screen w-screen bg-base-200 flex items-center justify-center p-4">
-            <div className="max-w-2xl text-center bg-base-100 p-10 rounded-2xl shadow-2xl">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-primary mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                <h1 className="text-3xl font-bold mb-4">به سامانه کارکرد خوش آمدید</h1>
-                <p className="mb-6 text-base-content/80">
-                    برای شروع و جهت تضمین امنیت و پایداری اطلاعات شما، لطفاً یک پوشه روی کامپیوتر خود برای ذخیره‌سازی داده‌های برنامه (مانند اطلاعات پرسنل، مدارک و فایل‌های پشتیبان) انتخاب کنید.
-                    تمام اطلاعات به صورت محلی در این پوشه ذخیره خواهد شد.
-                </p>
-                {error && <div className="alert alert-error mb-4">{error}</div>}
-                <p className="text-sm text-base-content/60">
-                    لطفاً به صفحه <strong className="font-bold text-secondary">تنظیمات</strong> بروید و در بخش «مدیریت ذخیره‌سازی» پوشه مورد نظر خود را انتخاب نمایید.
-                </p>
-            </div>
-        </div>
-    );
-};
-
 const App: React.FC = () => {
-    const { view, setView, currentProjectId } = useAppStore();
+    const { view } = useAppStore();
     const { theme } = useThemeStore();
-    const { getSettings, setLastAutoBackupTimestamp } = useSettingsStore();
+    const { setLastAutoBackupTimestamp } = useSettingsStore();
     const addToast = useToastStore(s => s.addToast);
     const [isFsReady, setIsFsReady] = useState(false);
     const [fsError, setFsError] = useState('');
@@ -60,8 +34,10 @@ const App: React.FC = () => {
             if (success) {
                 setIsFsReady(true);
                 // After FS is ready, check for auto-backup
-                if (currentProjectId) {
-                    const settings = getSettings(currentProjectId);
+                // We get the project ID from the store directly to avoid stale closures in the single-run useEffect
+                const activeProjectId = useAppStore.getState().currentProjectId;
+                if (activeProjectId) {
+                    const settings = useSettingsStore.getState().getSettings(activeProjectId);
                     const { autoBackupInterval, lastAutoBackupTimestamp = 0 } = settings;
                     if (autoBackupInterval === 'none') return;
 
@@ -81,7 +57,7 @@ const App: React.FC = () => {
                         addToast(`پشتیبان‌گیری خودکار (${autoBackupInterval === 'daily' ? 'روزانه' : 'هفتگی'}) در حال انجام است...`, 'info');
                         const { success: backupSuccess, fileName } = await runBackup({ isAuto: true });
                         if (backupSuccess) {
-                            setLastAutoBackupTimestamp(currentProjectId, now);
+                            useSettingsStore.getState().setLastAutoBackupTimestamp(activeProjectId, now);
                             addToast(`پشتیبان‌گیری خودکار با موفقیت در فایل "${fileName}" انجام شد.`, 'success');
                         } else {
                             addToast('پشتیبان‌گیری خودکار با خطا مواجه شد.', 'error');
@@ -93,7 +69,7 @@ const App: React.FC = () => {
             }
         };
         initApp();
-    }, [isFsReady, currentProjectId]); // Re-run if projectId changes after initial load
+    }, []); // Run only once on initial app load
 
 
     // Register Service Worker for offline capabilities
@@ -127,22 +103,6 @@ const App: React.FC = () => {
                 return <Dashboard />;
         }
     };
-
-    if (!isFsReady && view !== 'settings') {
-        return (
-            <div dir="rtl" className="flex h-screen bg-base-200 font-sans" style={{ fontFamily: 'Vazirmatn, sans-serif' }}>
-                 <Sidebar />
-                 <div className="flex-1 flex flex-col overflow-hidden">
-                    <AppHeader />
-                    <main className="flex-1 overflow-x-hidden overflow-y-auto bg-base-100 p-4 md:p-6">
-                         <DirectorySetupPrompt error={fsError} />
-                    </main>
-                    <Footer />
-                </div>
-                <ToastContainer />
-            </div>
-        );
-    }
 
     return (
         <div dir="rtl" className="flex h-screen bg-base-200 font-sans" style={{ fontFamily: 'Vazirmatn, sans-serif' }}>

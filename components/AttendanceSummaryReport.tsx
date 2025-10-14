@@ -98,7 +98,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
             </div>
 
             {data.length > 0 ? (
-                <div className="print-area bg-white p-4 border rounded-md">
+                <div className="print-area bg-white p-4 border rounded-md print-monochrome summary-report-print">
                     <ReportHeader />
                     <table className="w-full text-center border-collapse border border-black mt-4">
                         <thead>
@@ -107,14 +107,14 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
                                 <th className="border border-black p-1">نام خانوادگی</th>
                                 <th className="border border-black p-1">نام</th>
                                 <th className="border border-black p-1">شغل</th>
-                                <th className="border border-black p-1">حضور</th>
-                                <th className="border border-black p-1">مرخصی</th>
-                                <th className="border border-black p-1">استعلاجی</th>
-                                <th className="border border-black p-1">غیبت</th>
-                                <th className="border border-black p-1">جمعه کاری</th>
-                                <th className="border border-black p-1">تعطیل کاری</th>
-                                <th className="border border-black p-1">اضافه کاری</th>
-                                <th className="border border-black p-1">جمع ایام</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">حضور</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">مرخصی</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">استعلاجی</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">غیبت</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">جمعه کاری</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">تعطیل کاری</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">اضافه کاری</th>
+                                <th className="border border-black p-1 vertical-header numeric-col">جمع ایام</th>
                                 <th className="border border-black p-1">توضیحات</th>
                             </tr>
                         </thead>
@@ -124,15 +124,15 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
                                     <td className="border border-black p-1">{index + 1}</td>
                                     <td className="border border-black p-1 text-right">{item.lastName}</td>
                                     <td className="border border-black p-1 text-right">{item.firstName}</td>
-                                    <td className="border border-black p-1 text-right">{item.position}</td>
-                                    <td className="border border-black p-1">{item.presenceDays || '-'}</td>
-                                    <td className="border border-black p-1">{item.leaveDays || '-'}</td>
-                                    <td className="border border-black p-1">{item.sickDays || '-'}</td>
-                                    <td className="border border-black p-1">{item.absentDays || '-'}</td>
-                                    <td className="border border-black p-1">{item.fridayWorkDays || '-'}</td>
-                                    <td className="border border-black p-1">{item.holidayWorkDays || '-'}</td>
-                                    <td className="border border-black p-1">{item.overtimeHours || '-'}</td>
-                                    <td className="border border-black p-1 font-bold">{item.totalWorkedDays}</td>
+                                    <td className="border border-black p-1 text-right job-title-cell">{item.position}</td>
+                                    <td className="border border-black p-1 numeric-col">{item.presenceDays || '-'}</td>
+                                    <td className="border border-black p-1 numeric-col">{item.leaveDays || '-'}</td>
+                                    <td className="border border-black p-1 numeric-col">{item.sickDays || '-'}</td>
+                                    <td className="border border-black p-1 numeric-col">{item.absentDays || '-'}</td>
+                                    <td className="border border-black p-1 numeric-col">{item.fridayWorkDays || '-'}</td>
+                                    <td className="border border-black p-1 numeric-col">{item.holidayWorkDays || '-'}</td>
+                                    <td className="border border-black p-1 numeric-col">{item.overtimeHours || '-'}</td>
+                                    <td className="border border-black p-1 font-bold numeric-col">{item.totalWorkedDays}</td>
                                     <td className="border border-black p-1">{item.notes}</td>
                                 </tr>
                             ))}

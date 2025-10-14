@@ -135,7 +135,7 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
                 </button>
             </div>
             {employees.length > 0 ? (
-                <div className="print-area bg-white p-2 border rounded-md overflow-x-auto">
+                <div className="print-area bg-white p-2 border rounded-md overflow-x-auto print-monochrome">
                      <ReportHeader />
                      <table className="w-full border-collapse border border-black text-xs">
                         {renderHeader()}

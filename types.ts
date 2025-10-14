@@ -42,6 +42,8 @@ export interface CustomAttendanceCode {
     isSystemCode?: boolean; // To identify and protect system codes
 }
 
+export type PersonnelColumnKey = 'monthlySalary' | 'settlementDate' | 'contractStartDate' | 'contractEndDate';
+
 export interface Settings {
     baseDayCount: number;
     holidays: string[];
@@ -53,6 +55,7 @@ export interface Settings {
     geminiApiKey: string;
     autoBackupInterval: 'none' | 'daily' | 'weekly';
     lastAutoBackupTimestamp?: number;
+    personnelVisibleColumns?: Record<PersonnelColumnKey, boolean>;
 }
 
 export interface MonthlyFinancials {

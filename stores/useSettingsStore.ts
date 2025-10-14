@@ -1,18 +1,19 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Settings, CustomAttendanceCode } from '../types';
+import { Settings, CustomAttendanceCode, PersonnelColumnKey } from '../types';
 
 interface SettingsState {
     projectSettings: {
         [projectId: string]: Settings;
     };
     getSettings: (projectId: string) => Settings;
-    updateSettings: (projectId: string, newSettings: Partial<Omit<Settings, 'customCodes'>>) => void;
+    updateSettings: (projectId: string, newSettings: Partial<Omit<Settings, 'customCodes' | 'personnelVisibleColumns'>>) => void;
     setLastAutoBackupTimestamp: (projectId: string, timestamp: number) => void;
     setDayOverride: (projectId: string, date: string, type: 'normal' | 'friday' | 'holiday' | null) => void;
     addCustomCode: (projectId: string, code: Omit<CustomAttendanceCode, 'id'>) => boolean;
     updateCustomCode: (projectId: string, codeId: string, updates: Partial<CustomAttendanceCode>) => boolean;
     removeCustomCode: (projectId: string, codeId: string) => void;
+    updatePersonnelVisibleColumns: (projectId: string, column: PersonnelColumnKey, isVisible: boolean) => void;
     removeProjectSettings: (projectId: string) => void;
     getStateForBackup: () => { projectSettings: { [id: string]: Settings } };
     restoreState: (state: { projectSettings: { [id: string]: Settings } }) => void;
@@ -30,12 +31,18 @@ const initialSettings: Settings = {
         { id: 'system-a', char: 'ا', description: 'استعلاجی (با حقوق)', color: '#FDE68A', isSystemCode: true },
         { id: 'system-t', char: 'ت', description: 'تسویه حساب', color: '#E9D5FF', isSystemCode: true },
         { id: 'system-friday-work', char: 'جمعه', description: 'رنگ پس‌زمینه ستون جمعه', color: '#dbfde8', isSystemCode: true },
-        { id: 'system-holiday-work', char: 'تعطیل', description: 'رنگ پس‌زمینه ستون تعطیل', color: '#fe F9c3', isSystemCode: true },
+        { id: 'system-holiday-work', char: 'تعطیل', description: 'رنگ پس‌زمینه ستون تعطیل', color: '#fef9c3', isSystemCode: true },
     ],
     isAiAssistantEnabled: false,
     geminiApiKey: '',
     autoBackupInterval: 'none',
     lastAutoBackupTimestamp: 0,
+    personnelVisibleColumns: {
+        monthlySalary: true,
+        settlementDate: true,
+        contractStartDate: false,
+        contractEndDate: false,
+    }
 };
 
 export const useSettingsStore = create(
@@ -56,7 +63,12 @@ export const useSettingsStore = create(
                     }
                 });
 
-                return { ...initialSettings, ...projectSpecificSettings, customCodes };
+                const personnelVisibleColumns = {
+                    ...initialSettings.personnelVisibleColumns,
+                    ...(projectSpecificSettings.personnelVisibleColumns || {})
+                };
+
+                return { ...initialSettings, ...projectSpecificSettings, customCodes, personnelVisibleColumns };
             },
             updateSettings: (projectId, newSettings) => set((state) => {
                 const currentSettings = state.getSettings(projectId);
@@ -149,6 +161,16 @@ export const useSettingsStore = create(
                 const updatedCodes = settings.customCodes.filter(c => c.id !== codeId);
                 const updatedSettings = { ...settings, customCodes: updatedCodes };
                 return { projectSettings: { ...state.projectSettings, [projectId]: updatedSettings } };
+            }),
+             updatePersonnelVisibleColumns: (projectId, column, isVisible) => set(state => {
+                const settings = state.getSettings(projectId);
+                const updatedColumns = { ...settings.personnelVisibleColumns, [column]: isVisible };
+                return {
+                    projectSettings: {
+                        ...state.projectSettings,
+                        [projectId]: { ...settings, personnelVisibleColumns: updatedColumns }
+                    }
+                };
             }),
             removeProjectSettings: (projectId) => set((state) => {
                 const newProjectSettings = { ...state.projectSettings };

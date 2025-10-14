@@ -94,21 +94,24 @@ const AttendanceTable: React.FC = () => {
             const dayOfWeek = (firstDay + i) % 7;
             const date = getFormattedDate(selectedYear, selectedMonth, day);
             const override = settings.dayTypeOverrides[date];
-            let cellClass = "bg-gray-100";
-            if (override) {
-                 if (override === 'holiday') cellClass = 'bg-red-200';
-                 if (override === 'friday') cellClass = 'bg-green-200';
-                 if (override === 'normal') cellClass = 'bg-blue-200';
-            } else if (dayOfWeek === 6) { // Friday
-                cellClass = 'bg-green-100';
-            } else if (settings.holidays.includes(date)) {
-                cellClass = 'bg-red-100';
+
+            let cellBgColor = '';
+            const isFriday = override === 'friday' || (!override && dayOfWeek === 6);
+            const isHoliday = override === 'holiday' || (!override && settings.holidays.includes(date));
+
+            if (override === 'normal') {
+                cellBgColor = '#dbeafe'; // bg-blue-200
+            } else if (isFriday) {
+                cellBgColor = settings.customCodes.find(c => c.id === 'system-friday-work')?.color || '#dcfce7'; // fallback bg-green-100
+            } else if (isHoliday) {
+                cellBgColor = settings.customCodes.find(c => c.id === 'system-holiday-work')?.color || '#fee2e2'; // fallback bg-red-100
             }
 
             headers.push(
                 <th 
                     key={i} 
-                    className={`p-1 border border-gray-300 text-center sticky top-0 z-10 ${cellClass} min-w-[50px] cursor-pointer`} 
+                    className="p-1 border border-gray-300 text-center sticky top-0 z-10 min-w-[50px] cursor-pointer"
+                    style={{ backgroundColor: cellBgColor || '#f3f4f6' /* fallback bg-gray-100 */ }}
                     onContextMenu={(e) => handleDayHeaderClick(e, day)}
                     title="برای تغییر وضعیت روز، کلیک-راست کنید"
                 >
