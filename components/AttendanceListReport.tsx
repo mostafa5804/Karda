@@ -18,6 +18,7 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
     const { reportDateFilter } = useAppStore();
     const { projects } = useCompanyStore();
     const [printMode, setPrintMode] = useState<'color' | 'monochrome'>('monochrome');
+    const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('landscape');
     
     // This report is always for a single month, taken from the 'from' part of the filter
     const { year: selectedYear, month: selectedMonth } = reportDateFilter.from;
@@ -32,12 +33,15 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
     }, [settings.customCodes]);
 
     const handlePrint = () => {
+        const styleId = 'dynamic-print-style';
+        document.getElementById(styleId)?.remove();
+
         const style = document.createElement('style');
-        style.id = 'print-landscape-style';
-        style.innerHTML = `@media print { @page { size: A4 landscape; margin: 1cm; } }`;
+        style.id = styleId;
+        style.innerHTML = `@media print { @page { size: A4 ${printOrientation}; margin: 1cm; } }`;
         document.head.appendChild(style);
+        
         window.print();
-        document.getElementById('print-landscape-style')?.remove();
     };
 
     const currentProject = projects.find(p => p.id === projectId);
@@ -166,10 +170,14 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
                         لیست کارکرد
                     </h1>
                     <p className="text-gray-600">
-                        این گزارش برای چاپ افقی در صفحه A4 بهینه شده است.
+                        این گزارش برای چاپ بهینه شده است.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <div className="join">
+                        <input className="join-item btn btn-sm" type="radio" name="print_orientation_list" aria-label="عمودی" value="portrait" checked={printOrientation === 'portrait'} onChange={() => setPrintOrientation('portrait')} />
+                        <input className="join-item btn btn-sm" type="radio" name="print_orientation_list" aria-label="افقی" value="landscape" checked={printOrientation === 'landscape'} onChange={() => setPrintOrientation('landscape')} />
+                    </div>
                     <div className="join">
                         <input className="join-item btn btn-sm" type="radio" name="print_options_list" aria-label="رنگی" value="color" checked={printMode === 'color'} onChange={() => setPrintMode('color')} />
                         <input className="join-item btn btn-sm" type="radio" name="print_options_list" aria-label="سیاه‌وسفید" value="monochrome" checked={printMode === 'monochrome'} onChange={() => setPrintMode('monochrome')} />

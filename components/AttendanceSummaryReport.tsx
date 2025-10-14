@@ -16,6 +16,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
     const { reportDateFilter } = useAppStore();
     const { projects } = useCompanyStore();
     const [printMode, setPrintMode] = useState<'color' | 'monochrome'>('monochrome');
+    const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
     const currentProject = projects.find(p => p.id === projectId);
 
@@ -24,6 +25,14 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
     }, [employees, attendance, settings, reportDateFilter]);
 
     const handlePrint = () => {
+        const styleId = 'dynamic-print-style';
+        document.getElementById(styleId)?.remove();
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `@media print { @page { size: A4 ${printOrientation}; margin: 1cm; } }`;
+        document.head.appendChild(style);
+
         window.print();
     };
     
@@ -85,10 +94,14 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
                         {reportTitle}
                     </h1>
                     <p className="text-gray-600">
-                        این گزارش برای چاپ در صفحه A4 عمودی بهینه شده است.
+                        این گزارش برای چاپ در صفحه A4 بهینه شده است.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                     <div className="join">
+                        <input className="join-item btn btn-sm" type="radio" name="print_orientation_summary" aria-label="عمودی" value="portrait" checked={printOrientation === 'portrait'} onChange={() => setPrintOrientation('portrait')} />
+                        <input className="join-item btn btn-sm" type="radio" name="print_orientation_summary" aria-label="افقی" value="landscape" checked={printOrientation === 'landscape'} onChange={() => setPrintOrientation('landscape')} />
+                    </div>
                      <div className="join">
                         <input className="join-item btn btn-sm" type="radio" name="print_options" aria-label="رنگی" value="color" checked={printMode === 'color'} onChange={() => setPrintMode('color')} />
                         <input className="join-item btn btn-sm" type="radio" name="print_options" aria-label="سیاه‌وسفید" value="monochrome" checked={printMode === 'monochrome'} onChange={() => setPrintMode('monochrome')} />

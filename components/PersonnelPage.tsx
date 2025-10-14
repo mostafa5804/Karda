@@ -51,6 +51,7 @@ const PersonnelPage: React.FC = () => {
     const [importedData, setImportedData] = useState<Partial<Employee>[] | null>(null);
     const fileImportInputRef = useRef<HTMLInputElement>(null);
     const [printMode, setPrintMode] = useState<'color' | 'monochrome'>('monochrome');
+    const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('landscape');
 
     const todayString = useMemo(() => {
         const [y, m, d] = getCurrentJalaliDate();
@@ -136,6 +137,14 @@ const PersonnelPage: React.FC = () => {
     };
     
     const handlePrint = () => {
+        const styleId = 'dynamic-print-style';
+        document.getElementById(styleId)?.remove();
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `@media print { @page { size: A4 ${printOrientation}; margin: 1cm; } }`;
+        document.head.appendChild(style);
+        
         window.print();
     };
     
@@ -184,6 +193,10 @@ const PersonnelPage: React.FC = () => {
                     className="input input-bordered w-full max-w-xs"
                 />
                 <div className="flex items-center gap-2 flex-wrap">
+                     <div className="join">
+                        <input className="join-item btn btn-sm btn-outline" type="radio" name="print_orientation_personnel" aria-label="عمودی" value="portrait" checked={printOrientation === 'portrait'} onChange={() => setPrintOrientation('portrait')} />
+                        <input className="join-item btn btn-sm btn-outline" type="radio" name="print_orientation_personnel" aria-label="افقی" value="landscape" checked={printOrientation === 'landscape'} onChange={() => setPrintOrientation('landscape')} />
+                    </div>
                      <div className="join">
                         <input className="join-item btn btn-sm btn-outline" type="radio" name="print_options_personnel" aria-label="رنگی" value="color" checked={printMode === 'color'} onChange={() => setPrintMode('color')} />
                         <input className="join-item btn btn-sm btn-outline" type="radio" name="print_options_personnel" aria-label="سیاه‌وسفید" value="monochrome" checked={printMode === 'monochrome'} onChange={() => setPrintMode('monochrome')} />

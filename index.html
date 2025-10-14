@@ -47,21 +47,13 @@
       }
       @media print {
         @page {
-            size: A4 portrait;
+            size: A4 portrait; /* Fallback orientation */
             margin: 1.5cm;
         }
-        .personnel-print-area {
-            @page {
-                size: A4 portrait;
-                margin: 1cm;
-            }
-        }
-        .payslip-print-area {
-            @page {
-                size: A4 portrait;
-                margin: 1cm;
-            }
-        }
+        /*
+          Specific @page rules are now handled dynamically via JavaScript
+          to allow user-selection of page orientation.
+        */
         body * {
           visibility: hidden;
         }
