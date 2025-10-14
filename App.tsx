@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import AppHeader from './components/AppHeader';
 import AttendanceTable from './components/AttendanceTable';
@@ -10,30 +10,63 @@ import { useAppStore } from './stores/useAppStore';
 import ToastContainer from './components/ToastContainer';
 import { useThemeStore } from './stores/useThemeStore';
 import Footer from './components/Footer';
-import { storageManager } from './utils/db';
+import { fileSystemManager } from './utils/db';
+import { useSettingsStore } from './stores/useSettingsStore';
+import { runBackup } from './utils/backup';
+import { useToastStore } from './stores/useToastStore';
 
 const App: React.FC = () => {
-    const { view } = useAppStore();
+    const { view, currentProjectId, isFileSystemReady, setIsFileSystemReady } = useAppStore();
     const { theme } = useThemeStore();
-    const [isStorageReady, setIsStorageReady] = useState(false);
-    const [storageError, setStorageError] = useState('');
-
+    const { getSettings, setLastAutoBackupTimestamp } = useSettingsStore();
+    const addToast = useToastStore(s => s.addToast);
+    
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
     }, [theme]);
 
-    // Storage Initialization
+    // Handle Initialization
     useEffect(() => {
         const initApp = async () => {
-            const { success, message } = await storageManager.initialize();
+            const { success } = await fileSystemManager.initialize();
             if (success) {
-                setIsStorageReady(true);
-            } else {
-                setStorageError(message);
+                setIsFileSystemReady(true);
             }
         };
         initApp();
-    }, []); 
+    }, [setIsFileSystemReady]); 
+
+    // Auto-backup logic
+    useEffect(() => {
+        if (!isFileSystemReady || !currentProjectId) return;
+
+        const settings = getSettings(currentProjectId);
+        const { autoBackupInterval, lastAutoBackupTimestamp = 0 } = settings;
+
+        if (autoBackupInterval === 'none') return;
+
+        const now = Date.now();
+        const oneDay = 24 * 60 * 60 * 1000;
+        const oneWeek = 7 * oneDay;
+
+        let intervalMs = 0;
+        if (autoBackupInterval === 'daily') intervalMs = oneDay;
+        if (autoBackupInterval === 'weekly') intervalMs = oneWeek;
+        
+        if (intervalMs > 0 && now - lastAutoBackupTimestamp > intervalMs) {
+            console.log('Performing automatic backup...');
+            runBackup({ isAuto: true }).then(({ success, fileName }) => {
+                if (success) {
+                    addToast(`پشتیبان‌گیری خودکار با نام "${fileName}" انجام شد.`, 'info');
+                    setLastAutoBackupTimestamp(currentProjectId, now);
+                } else {
+                    addToast('پشتیبان‌گیری خودکار با خطا مواجه شد.', 'warning');
+                }
+            });
+        }
+
+    }, [isFileSystemReady, currentProjectId, getSettings, setLastAutoBackupTimestamp, addToast]);
+
 
     // Register Service Worker for offline capabilities
     useEffect(() => {
@@ -51,23 +84,6 @@ const App: React.FC = () => {
     }, []);
 
     const renderView = () => {
-        if (!isStorageReady) {
-            return (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                    {storageError ? (
-                        <div className="alert alert-error">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <span>خطا در راه‌اندازی ذخیره‌سازی: {storageError}</span>
-                        </div>
-                    ) : (
-                        <>
-                            <span className="loading loading-lg loading-spinner"></span>
-                            <p>در حال آماده‌سازی برنامه...</p>
-                        </>
-                    )}
-                </div>
-            )
-        }
         switch (view) {
             case 'dashboard':
                 return <Dashboard />;

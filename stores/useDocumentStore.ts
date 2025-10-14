@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Document, Employee } from '../types';
-import { storageManager } from '../utils/db';
+import { fileSystemManager } from '../utils/db';
 import { useEmployeeStore } from './useEmployeeStore';
 
 /**
@@ -45,10 +45,18 @@ export const useDocumentStore = create(
                     return false;
                 }
 
-                const filePath = `documents/${projectId}/${folderName}/${fileName}`;
+                const dirPath = `documents/${projectId}/${folderName}`;
+                const filePath = `${dirPath}/${fileName}`;
                 
                 try {
-                    await storageManager.saveFile(filePath, file);
+                    const dirHandle = await fileSystemManager.getDirectoryHandle(dirPath, { create: true });
+                    if (!dirHandle) throw new Error('Could not get/create directory handle.');
+
+                    const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(file);
+                    await writable.close();
+                    
                     const newDoc: Document = {
                         ...docData,
                         id: crypto.randomUUID(),
@@ -78,16 +86,30 @@ export const useDocumentStore = create(
             },
 
             getDownloadableFile: async (doc) => {
-                const blob = await storageManager.readFile(doc.filePath);
-                if (blob) {
-                    return new File([blob], doc.fileName, { type: doc.fileType });
+                 try {
+                    const fileHandle = await fileSystemManager.getFileHandle(doc.filePath);
+                    if (fileHandle) {
+                        return await fileHandle.getFile();
+                    }
+                    return null;
+                } catch (error) {
+                    console.error('Error getting downloadable file:', error);
+                    return null;
                 }
-                return null;
             },
 
             deleteDocument: async (docToDelete) => {
                 try {
-                    await storageManager.deleteFile(docToDelete.filePath);
+                    const pathParts = docToDelete.filePath.split('/');
+                    const fileName = pathParts.pop();
+                    const dirPath = pathParts.join('/');
+                    if (!fileName) return;
+
+                    const dirHandle = await fileSystemManager.getDirectoryHandle(dirPath);
+                    if (dirHandle) {
+                        await dirHandle.removeEntry(fileName);
+                    }
+                    
                     set(state => {
                         const projectDocs = state.projectDocuments[docToDelete.projectId] || [];
                         const updatedDocs = projectDocs.filter(d => d.id !== docToDelete.id);
@@ -106,12 +128,20 @@ export const useDocumentStore = create(
             removeEmployeeDocuments: async (projectId, employeeId) => {
                 const employee = useEmployeeStore.getState().getProjectData(projectId).employees.find(e => e.id === employeeId);
                 const folderName = getEmployeeFolderName(employee);
+                if (!folderName) return;
 
-                if (folderName) {
-                    const employeeDirPath = `documents/${projectId}/${folderName}/`;
-                    await storageManager.deleteDirectory(employeeDirPath);
-                } else {
-                    console.warn(`Could not determine folder name for employee ${employeeId}. Metadata will be removed, but the folder might remain if it exists under a different name.`);
+                const projectDirPath = `documents/${projectId}`;
+                
+                try {
+                    const projectDirHandle = await fileSystemManager.getDirectoryHandle(projectDirPath);
+                    if (projectDirHandle) {
+                        await projectDirHandle.removeEntry(folderName, { recursive: true });
+                    }
+                } catch (error) {
+                    // Ignore error if directory doesn't exist
+                    if (!(error instanceof DOMException && error.name === 'NotFoundError')) {
+                         console.warn(`Could not remove directory for employee ${employeeId}:`, error);
+                    }
                 }
 
                 set(state => {
@@ -127,8 +157,18 @@ export const useDocumentStore = create(
             },
 
             removeProjectDocuments: async (projectId) => {
-                const projectDirPath = `documents/${projectId}/`;
-                await storageManager.deleteDirectory(projectDirPath);
+                 const projectDirPath = `documents/${projectId}`;
+                try {
+                    const documentsDirHandle = await fileSystemManager.getDirectoryHandle('documents');
+                    if (documentsDirHandle) {
+                        await documentsDirHandle.removeEntry(projectId, { recursive: true });
+                    }
+                } catch (error) {
+                     if (!(error instanceof DOMException && error.name === 'NotFoundError')) {
+                        console.warn(`Could not remove project directory ${projectId}:`, error);
+                     }
+                }
+
                 set(state => {
                     const newProjectDocuments = { ...state.projectDocuments };
                     delete newProjectDocuments[projectId];
@@ -141,8 +181,7 @@ export const useDocumentStore = create(
             },
 
             clearAndRestoreDocuments: async (documents) => {
-                // This is a simplified restore. It assumes files are NOT in place and just restores metadata.
-                // The user needs to restore the files manually if needed (e.g. from a separate backup).
+                // This only restores metadata. The user is responsible for restoring files.
                 const docsByProject: { [projectId: string]: Document[] } = {};
                 documents.forEach(doc => {
                     if (!docsByProject[doc.projectId]) {

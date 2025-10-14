@@ -1,4 +1,3 @@
-import { FileSystemDirectoryHandle } from 'idb';
 
 export type View = 'dashboard' | 'attendance' | 'personnel' | 'reports' | 'settings';
 export type ReportView = 'salary' | 'attendanceSummary' | 'attendanceList' | 'individual';

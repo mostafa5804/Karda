@@ -30,6 +30,9 @@ interface AppState {
 
     reportDateFilter: ReportDateFilter;
     setReportDateFilter: (filter: ReportDateFilter) => void;
+
+    isFileSystemReady: boolean;
+    setIsFileSystemReady: (isReady: boolean) => void;
 }
 
 const [currentYear, currentMonth] = getCurrentJalaliDate();
@@ -81,6 +84,9 @@ export const useAppStore = create(
                 to: { year: currentYear, month: currentMonth },
             },
             setReportDateFilter: (filter) => set({ reportDateFilter: filter }),
+
+            isFileSystemReady: false,
+            setIsFileSystemReady: (isReady) => set({ isFileSystemReady: isReady }),
         }),
         {
             name: 'app-storage-v2', // version bump to avoid conflicts

@@ -7,6 +7,7 @@ import { useDocumentStore } from '../stores/useDocumentStore';
 import { isValidJalaliDateString } from '../utils/calendar';
 import { formatCurrency } from '../utils/currency';
 import { useEmployeeStore } from '../stores/useEmployeeStore';
+import { fileSystemManager } from '../utils/db';
 
 interface EmployeeDetailsModalProps {
     isOpen: boolean;
@@ -46,7 +47,7 @@ const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({ isOpen, onC
     const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
-    const { currentProjectId } = useAppStore();
+    const { currentProjectId, isFileSystemReady } = useAppStore();
     const projectId = currentProjectId || 'default';
     const settings = useSettingsStore().getSettings(projectId);
     const { employees } = useEmployeeStore().getProjectData(projectId);
@@ -307,6 +308,22 @@ const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({ isOpen, onC
                          <div>
                             {!employee ? (
                                 <div className="alert alert-info">ابتدا کارمند را ذخیره کنید تا بتوانید مدارک را بارگذاری نمایید.</div>
+                            ) : !isFileSystemReady ? (
+                                <div className="card bg-base-200">
+                                    <div className="card-body items-center text-center">
+                                        <h2 className="card-title">دسترسی به پوشه لازم است</h2>
+                                        <p>برای بارگذاری و مدیریت مدارک، برنامه به دسترسی برای ذخیره فایل‌ها نیاز دارد. لطفاً یک پوشه انتخاب کنید.</p>
+                                        <div className="card-actions justify-end">
+                                        <button 
+                                            className="btn btn-primary"
+                                            onClick={async () => {
+                                                const { success, message } = await fileSystemManager.requestHandle();
+                                                addToast(message, success ? 'success' : 'error');
+                                            }}
+                                        >انتخاب پوشه</button>
+                                        </div>
+                                    </div>
+                                </div>
                             ) : (
                                 <>
                                     <div 

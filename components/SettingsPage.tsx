@@ -10,6 +10,7 @@ import { Settings, CustomAttendanceCode } from '../types';
 import { useNotesStore } from '../stores/useNotesStore';
 import { useDocumentStore } from '../stores/useDocumentStore';
 import { runBackup } from '../utils/backup';
+import { fileSystemManager } from '../utils/db';
 
 const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     const { getSettings, addCustomCode, updateCustomCode, removeCustomCode } = useSettingsStore();
@@ -94,13 +95,13 @@ const SettingsPage: React.FC = () => {
     const [salaryMode, setSalaryMode] = useState(projectSettings.salaryMode);
     const [isAiAssistantEnabled, setIsAiAssistantEnabled] = useState(projectSettings.isAiAssistantEnabled);
     const [geminiApiKey, setGeminiApiKey] = useState(projectSettings.geminiApiKey);
+    const [autoBackupInterval, setAutoBackupInterval] = useState(projectSettings.autoBackupInterval);
     
     const [newProjectName, setNewProjectName] = useState('');
     const [editingProject, setEditingProject] = useState<{ id: string, name: string } | null>(null);
 
     const [projectToRemove, setProjectToRemove] = useState<{ id: string; name: string } | null>(null);
     const [isRestoring, setIsRestoring] = useState(false);
-    const fileRestoreInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const project = projects.find(p => p.id === projectId);
@@ -113,12 +114,13 @@ const SettingsPage: React.FC = () => {
         setSalaryMode(settings.salaryMode || 'project');
         setIsAiAssistantEnabled(settings.isAiAssistantEnabled);
         setGeminiApiKey(settings.geminiApiKey);
+        setAutoBackupInterval(settings.autoBackupInterval);
     }, [projectId, projects, getSettings]);
     
     const handleSaveProjectDetails = () => {
         if (!currentProject) return;
         updateProject(currentProject.id, { companyName });
-        updateSettings(projectId, { baseDayCount, currency, salaryMode });
+        updateSettings(projectId, { baseDayCount, currency, salaryMode, autoBackupInterval });
         addToast(`اطلاعات و تنظیمات پروژه "${currentProject.name}" ذخیره شد.`, 'success');
     };
 
@@ -181,23 +183,30 @@ const SettingsPage: React.FC = () => {
     };
 
     const handleBackup = async () => {
+        if (!fileSystemManager.hasHandle()) {
+            addToast('برای ادامه، ابتدا باید یک پوشه برای ذخیره‌سازی انتخاب کنید.', 'info');
+            const { success } = await fileSystemManager.requestHandle();
+            if (!success) {
+                addToast('عملیات پشتیبان‌گیری لغو شد.', 'warning');
+                return;
+            }
+        }
+        // The handle should be ready now, proceed with backup.
         const { success, fileName } = await runBackup({ isAuto: false });
         if (success) {
-            addToast(`فایل پشتیبان با نام "${fileName}" در حال دانلود است...`, 'success');
+            addToast(`فایل پشتیبان با نام "${fileName}" در پوشه backups ایجاد شد.`, 'success');
         } else {
             addToast("عملیات پشتیبان‌گیری با خطا مواجه شد.", "error");
         }
     };
     
-    const handleRestoreRequest = () => {
-        fileRestoreInputRef.current?.click();
-    };
-
-    const handleRestoreFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        
+    const handleRestoreRequest = async () => {
         try {
+            // FIX: Cast window to `any` to access the File System Access API.
+            const [fileHandle] = await (window as any).showOpenFilePicker({
+                types: [{ description: 'JSON Backup Files', accept: { 'application/json': ['.json'] } }],
+            });
+            const file = await fileHandle.getFile();
             const text = await file.text();
             const backupData = JSON.parse(text);
 
@@ -209,15 +218,10 @@ const SettingsPage: React.FC = () => {
             (window as any)._restoreData = backupData;
 
         } catch (err) {
-            console.error("Error selecting restore file:", err);
             if (err instanceof DOMException && err.name === 'AbortError') {
                  addToast('عملیات بازیابی لغو شد.', 'info');
             } else {
-                addToast('خطا در انتخاب یا پردازش فایل برای بازیابی.', 'error');
-            }
-        } finally {
-             if (fileRestoreInputRef.current) {
-                fileRestoreInputRef.current.value = '';
+                addToast(`خطا در انتخاب فایل: ${err instanceof Error ? err.message : ''}`, 'error');
             }
         }
     };
@@ -234,6 +238,7 @@ const SettingsPage: React.FC = () => {
             restoreFinancialState(backupData.financials || { projectFinancials: {} });
             restoreNotesState(backupData.notes || { projectNotes: {} });
             
+            // This only restores metadata. User must handle physical file restore.
             await clearAndRestoreDocuments(backupData.documents || []);
 
             addToast('اطلاعات با موفقیت بازیابی شد. صفحه مجددا بارگذاری می‌شود.', 'success');
@@ -323,6 +328,18 @@ const SettingsPage: React.FC = () => {
                                 </label>
                             </div>
                         </div>
+                         <div>
+                            <label className="block text-sm font-medium">پشتیبان‌گیری خودکار</label>
+                            <select 
+                                className="select select-bordered w-full max-w-xs mt-1"
+                                value={autoBackupInterval}
+                                onChange={e => setAutoBackupInterval(e.target.value as any)}
+                            >
+                                <option value="none">غیرفعال</option>
+                                <option value="daily">روزانه</option>
+                                <option value="weekly">هفتگی</option>
+                            </select>
+                        </div>
                         <div className="flex items-center gap-6 pt-4 border-t border-base-300">
                             {currentProject.companyLogo ? (<img src={currentProject.companyLogo} alt="لوگوی شرکت" className="h-24 w-24 object-contain rounded-md border p-1" />) : (<div className="h-24 w-24 bg-base-200 flex items-center justify-center rounded-md text-base-content/50">بدون لوگو</div>)}
                             <div>
@@ -372,19 +389,38 @@ const SettingsPage: React.FC = () => {
             </>
             )}
 
+            <details className="collapse collapse-arrow bg-base-100 shadow-sm">
+                <summary className="collapse-title text-xl font-bold">مدیریت ذخیره‌سازی</summary>
+                <div className="collapse-content space-y-4">
+                    <p className="text-sm text-base-content/70">
+                        پوشه فعلی برای ذخیره فایل‌ها انتخاب شده است. برای تغییر، پوشه جدیدی را انتخاب کنید. با این کار، صفحه مجدداً بارگذاری خواهد شد.
+                    </p>
+                    <button
+                        onClick={async () => {
+                            const { success, message } = await fileSystemManager.requestHandle();
+                            addToast(message, success ? 'success' : 'error');
+                            if (success) setTimeout(() => window.location.reload(), 1000);
+                        }}
+                        className="btn btn-outline"
+                    >
+                        تغییر پوشه ذخیره‌سازی
+                    </button>
+                </div>
+            </details>
+
+
             <details className="collapse collapse-arrow bg-base-100 shadow-sm" open>
                 <summary className="collapse-title text-xl font-bold">پشتیبان‌گیری و بازیابی</summary>
                 <div className="collapse-content">
                     <div className="space-y-4">
                          <p className="text-sm text-base-content/70">
-                            برای ایجاد فایل پشتیبان، روی دکمه مربوطه کلیک کنید تا فایل در کامپیوتر شما ذخیره شود. برای بازیابی، فایل پشتیبان خود را انتخاب کنید.
+                            برای ایجاد فایل پشتیبان، روی دکمه مربوطه کلیک کنید تا فایل در پوشه `backups` در محل ذخیره‌سازی شما ایجاد شود. برای بازیابی، فایل پشتیبان خود را انتخاب کنید.
                         </p>
                     </div>
                    
                     <div className="flex items-center space-x-4 space-x-reverse mt-6 pt-4 border-t border-base-300">
                         <button onClick={handleBackup} className="btn btn-success">ایجاد فایل پشتیبان</button>
                         <button onClick={handleRestoreRequest} className="btn btn-warning">بازیابی از فایل</button>
-                        <input type="file" accept=".json" className="hidden" ref={fileRestoreInputRef} onChange={handleRestoreFileSelected} />
                     </div>
                 </div>
             </details>
@@ -408,7 +444,7 @@ const SettingsPage: React.FC = () => {
                 confirmText="بازیابی کن"
                 confirmClassName="btn-warning"
             >
-                <p>آیا مطمئن هستید؟ تمام اطلاعات فعلی برنامه با اطلاعات فایل پشتیبان جایگزین خواهد شد.</p>
+                <p>آیا مطمئن هستید؟ تمام اطلاعات فعلی برنامه با اطلاعات فایل پشتیبان جایگزین خواهد شد. مدارک فیزیکی باید به صورت دستی در پوشه جدید قرار داده شوند.</p>
             </ConfirmationModal>
         </div>
     );

@@ -4,6 +4,7 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { useFinancialStore } from '../stores/useFinancialStore';
 import { useNotesStore } from '../stores/useNotesStore';
 import { useDocumentStore } from '../stores/useDocumentStore';
+import { fileSystemManager } from './db';
 
 // A helper function to get state from non-hook stores
 const getBackupState = () => {
@@ -27,6 +28,10 @@ const getBackupState = () => {
 };
 
 export const runBackup = async ({ isAuto }: { isAuto: boolean }): Promise<{ success: boolean; fileName: string }> => {
+    if (!fileSystemManager.hasHandle()) {
+        console.error("Backup failed: No directory handle.");
+        return { success: false, fileName: '' };
+    }
     try {
         const backupData = getBackupState();
         const dateStr = new Date().toLocaleDateString('fa-IR-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
@@ -34,15 +39,13 @@ export const runBackup = async ({ isAuto }: { isAuto: boolean }): Promise<{ succ
         
         const fileName = `karkard-backup-${dateStr}-${timeStr}.json`;
         
-        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const backupsDirHandle = await fileSystemManager.getDirectoryHandle('backups', { create: true });
+        if (!backupsDirHandle) throw new Error("Could not create backups directory.");
+
+        const fileHandle = await backupsDirHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(backupData, null, 2));
+        await writable.close();
         
         return { success: true, fileName };
 
