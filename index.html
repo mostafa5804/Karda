@@ -95,23 +95,22 @@
 
         /* --- MONOCHROME MODE --- */
         .print-monochrome {
-            -webkit-print-color-adjust: economy !important;
-            print-color-adjust: economy !important;
+            /* Use 'exact' to force browser to print backgrounds we specify. */
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
         .print-monochrome * {
             color: #000 !important;
+            background-color: transparent !important; /* Default all backgrounds to transparent */
             box-shadow: none !important;
             text-shadow: none !important;
         }
-        .print-monochrome td[style*="background-color"],
-        .print-monochrome th[style*="background-color"] {
-            background-color: transparent !important;
-        }
+        /* Now, specifically add back the backgrounds we want */
         .print-monochrome thead tr {
-            background-color: #f2f2f2 !important; /* Light gray for header row */
+            background-color: #f2f2f2 !important;
         }
         .print-monochrome .table-alternating-rows tbody tr:nth-child(even) td {
-            background-color: #f9f9f9 !important; /* Alternating rows for summary/personnel */
+            background-color: #f9f9f9 !important;
         }
         .print-monochrome img {
             filter: grayscale(100%);
@@ -122,8 +121,10 @@
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
+        /* In color mode, only apply alternating rows to specific tables,
+           as the attendance list has its own colors. */
         .print-color .table-alternating-rows tbody tr:nth-child(even) td {
-            background-color: #f9f9f9 !important; /* Subtle alternating rows */
+            background-color: #f9f9f9 !important;
         }
 
         /* Specific styles for AttendanceSummaryReport */

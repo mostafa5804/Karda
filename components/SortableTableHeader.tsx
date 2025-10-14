@@ -9,13 +9,14 @@ interface SortableTableHeaderProps<T> {
     className?: string;
 }
 
-function SortableTableHeader<T extends object>({
+// FIX: Changed to a const arrow function to avoid potential TSX parsing issues with generics.
+const SortableTableHeader = <T extends object>({
     sortKey,
     sortConfig,
     requestSort,
     children,
     className
-}: SortableTableHeaderProps<T>) {
+}: SortableTableHeaderProps<T>) => {
     
     const getSortIcon = (direction: SortDirection) => {
         if (!direction) return '↕';

@@ -244,21 +244,13 @@ const PersonnelPage: React.FC = () => {
                     <thead className="bg-base-200 text-base-content/80">
                         <tr>
                             <th className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" onChange={e => handleSelectAll(e.target.checked)} checked={sortedEmployees.length > 0 && selectedIds.size === sortedEmployees.length}/></th>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>حقوق ماهانه</SortableTableHeader>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="contractStartDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>شروع قرارداد</SortableTableHeader>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>پایان قرارداد</SortableTableHeader>
-                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''}`}>تاریخ تسویه</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
