@@ -109,20 +109,27 @@ export const useDocumentStore = create(
                     if (dirHandle) {
                         await dirHandle.removeEntry(fileName);
                     }
-                    
-                    set(state => {
-                        const projectDocs = state.projectDocuments[docToDelete.projectId] || [];
-                        const updatedDocs = projectDocs.filter(d => d.id !== docToDelete.id);
-                        return {
-                            projectDocuments: {
-                                ...state.projectDocuments,
-                                [docToDelete.projectId]: updatedDocs
-                            }
-                        };
-                    });
                 } catch (error) {
-                     console.error("Failed to delete document:", error);
+                     // If the file doesn't exist, we still want to remove the metadata.
+                     if (error instanceof DOMException && error.name === 'NotFoundError') {
+                        console.log('File not found on disk, removing metadata entry.');
+                     } else {
+                        console.error("Failed to delete document file, but removing metadata anyway:", error);
+                     }
                 }
+                
+                // This state update now happens regardless of the file deletion outcome,
+                // ensuring the UI is always consistent with the user's action.
+                set(state => {
+                    const projectDocs = state.projectDocuments[docToDelete.projectId] || [];
+                    const updatedDocs = projectDocs.filter(d => d.id !== docToDelete.id);
+                    return {
+                        projectDocuments: {
+                            ...state.projectDocuments,
+                            [docToDelete.projectId]: updatedDocs
+                        }
+                    };
+                });
             },
 
             removeEmployeeDocuments: async (projectId, employeeId) => {
