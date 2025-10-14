@@ -244,21 +244,21 @@ const PersonnelPage: React.FC = () => {
                     <thead className="bg-base-200 text-base-content/80">
                         <tr>
                             <th className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" onChange={e => handleSelectAll(e.target.checked)} checked={sortedEmployees.length > 0 && selectedIds.size === sortedEmployees.length}/></th>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>حقوق ماهانه</SortableTableHeader>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="contractStartDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>شروع قرارداد</SortableTableHeader>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>پایان قرارداد</SortableTableHeader>
-                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            {/* FIX: The 'children' prop is required for SortableTableHeader. Added header text as children to each component instance. */}
                             <SortableTableHeader<Employee> sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''}`}>تاریخ تسویه</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
@@ -272,10 +272,10 @@ const PersonnelPage: React.FC = () => {
                             return (
                                 <tr key={emp.id} className={`border-t border-base-200 hover:bg-base-200 ${rowClass}`}>
                                     <td className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" checked={selectedIds.has(emp.id)} onChange={e => handleSelect(emp.id, e.target.checked)}/></td>
-                                    <td className="p-3">{emp.lastName}</td>
-                                    <td className="p-3">{emp.firstName}</td>
+                                    <td className="p-3 print-no-wrap">{emp.lastName}</td>
+                                    <td className="p-3 print-no-wrap">{emp.firstName}</td>
                                     <td className="p-3 font-mono">{emp.nationalId}</td>
-                                    <td className="p-3">{emp.position}</td>
+                                    <td className="p-3 print-no-wrap">{emp.position}</td>
                                     <td className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>{formatCurrency(emp.monthlySalary, settings.currency)}</td>
                                     <td className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>{emp.contractStartDate || '-'}</td>
                                     <td className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>{emp.contractEndDate || '-'}</td>

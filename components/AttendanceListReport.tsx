@@ -124,7 +124,7 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
                     return (
                         <tr key={employee.id} style={rowStyle}>
                             <td className="border border-black p-1 text-center">{index + 1}</td>
-                            <td className="border border-black p-1 text-right">{`${employee.lastName} ${employee.firstName}`}</td>
+                            <td className="border border-black p-1 text-right print-no-wrap">{`${employee.lastName} ${employee.firstName}`}</td>
                             {Array.from({ length: daysInMonth }, (_, i) => {
                                 const day = i + 1;
                                 const date = getFormattedDate(selectedYear, selectedMonth, day);

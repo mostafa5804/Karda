@@ -78,6 +78,9 @@
         .no-print {
             display: none !important;
         }
+        .print-no-wrap {
+            white-space: nowrap !important;
+        }
          .print-area table {
             width: 100%;
             border-collapse: collapse;
@@ -104,7 +107,7 @@
         .print-monochrome thead tr {
             background-color: #f2f2f2 !important; /* Light gray for header row */
         }
-        .print-monochrome .table-alternating-rows tbody tr:nth-child(even) {
+        .print-monochrome .table-alternating-rows tbody tr:nth-child(even) td {
             background-color: #f9f9f9 !important; /* Alternating rows for summary/personnel */
         }
         .print-monochrome img {
@@ -116,7 +119,7 @@
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
-        .print-color .table-alternating-rows tbody tr:nth-child(even) {
+        .print-color .table-alternating-rows tbody tr:nth-child(even) td {
             background-color: #f9f9f9 !important; /* Subtle alternating rows */
         }
 
@@ -128,9 +131,6 @@
             padding: 8px 4px !important;
             vertical-align: middle;
             transform: rotate(180deg);
-        }
-        .summary-report-print td.job-title-cell {
-            white-space: nowrap !important;
         }
         .summary-report-print .numeric-col {
             width: 5%;
