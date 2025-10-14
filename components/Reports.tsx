@@ -50,6 +50,14 @@ const Reports: React.FC = () => {
         reportDateFilter, setReportDateFilter,
     } = useAppStore();
     
+    // Local state to manage date filter changes before applying them.
+    const [localFilter, setLocalFilter] = useState<ReportDateFilter>(reportDateFilter);
+    
+    // Sync local state if global state changes (e.g., on initial load).
+    useEffect(() => {
+        setLocalFilter(reportDateFilter);
+    }, [reportDateFilter]);
+
     const { getProjectData } = useEmployeeStore();
     const { getSettings } = useSettingsStore();
     const { projects } = useCompanyStore();
@@ -108,64 +116,67 @@ const Reports: React.FC = () => {
         return activeEmployees.find(emp => emp.id === selectedEmployeeIdForReport);
     }, [activeEmployees, selectedEmployeeIdForReport]);
 
-    const handleModeChange = (newMode: 'month' | 'range') => {
-        setReportDateFilter(currentFilter => {
-            const [currentYear, currentMonth] = getCurrentJalaliDate();
-            const fallbackDate = { year: currentYear, month: currentMonth };
-            
-            const fromDate = currentFilter.from || fallbackDate;
-            const toDate = (newMode === 'month') ? fromDate : (currentFilter.to || fromDate);
-            
+    // Apply the local filter changes to the global state.
+    const handleApplyFilter = () => {
+        setReportDateFilter(localFilter);
+    };
+
+    const handleLocalModeChange = (newMode: 'month' | 'range') => {
+        setLocalFilter(currentFilter => {
+            const currentFrom = currentFilter.from;
+            const currentTo = currentFilter.to;
             return {
-                ...currentFilter,
                 mode: newMode,
-                from: fromDate,
-                to: toDate,
+                from: currentFrom,
+                to: newMode === 'month' ? currentFrom : currentTo,
             };
         });
     };
+    
+    const handleLocalDateChange = (part: 'from' | 'to', newDate: { year: number, month: number }) => {
+        setLocalFilter(currentFilter => {
+            const mode = currentFilter.mode;
+            let nextFrom = { ...currentFilter.from };
+            let nextTo = { ...currentFilter.to };
 
-    const handleDateChange = (part: 'from' | 'to', newDate: { year: number, month: number }) => {
-        setReportDateFilter(currentFilter => {
-            const [currentYear, currentMonth] = getCurrentJalaliDate();
-            const fallbackDate = { year: currentYear, month: currentMonth };
-            
-            let fromDate = currentFilter.from || fallbackDate;
-            let toDate = currentFilter.to || fromDate;
-
-            if (currentFilter.mode === 'month') {
-                fromDate = newDate;
-                toDate = newDate;
-            } else {
+            if (mode === 'month') {
+                nextFrom = newDate;
+                nextTo = newDate;
+            } else { // range mode
                 if (part === 'from') {
-                    fromDate = newDate;
+                    nextFrom = newDate;
                 } else {
-                    toDate = newDate;
+                    nextTo = newDate;
                 }
             }
             
-            // Ensure 'from' is not after 'to'
-            if (fromDate.year > toDate.year || (fromDate.year === toDate.year && fromDate.month > toDate.month)) {
+            // Ensure 'from' is not after 'to' for better UX
+            if (nextFrom.year > nextTo.year || (nextFrom.year === nextTo.year && nextFrom.month > nextTo.month)) {
                 if (part === 'from') {
-                    toDate = fromDate;
+                    nextTo = { ...nextFrom };
                 } else {
-                    fromDate = toDate;
+                    nextFrom = { ...nextTo };
                 }
             }
-            
+
             return {
-                ...currentFilter,
-                from: fromDate,
-                to: toDate,
+                mode: mode,
+                from: nextFrom,
+                to: nextTo,
             };
         });
     };
 
     const handleReportViewChange = (newView: ReportView) => {
-        // "Attendance List" report only supports month mode.
-        // If user switches to it while in range mode, auto-switch to month mode.
-        if (newView === 'attendanceList' && reportDateFilter.mode === 'range') {
-           setReportDateFilter(f => ({ ...f, mode: 'month', to: f.from! }));
+        // If switching to a view that doesn't support 'range', update the state accordingly.
+        if (newView === 'attendanceList' && localFilter.mode === 'range') {
+           const newFilterState: ReportDateFilter = {
+               ...localFilter,
+               mode: 'month',
+               to: localFilter.from,
+           };
+           setLocalFilter(newFilterState);
+           setReportDateFilter(newFilterState); // Apply change immediately for this case
         }
         setReportView(newView);
     };
@@ -267,29 +278,31 @@ const Reports: React.FC = () => {
                 
                  <div className="border-t pt-4">
                     <div role="tablist" className="tabs tabs-sm tabs-bordered">
-                        <a role="tab" className={`tab ${reportDateFilter.mode === 'month' ? 'tab-active' : ''}`} onClick={() => handleModeChange('month')}>ماهانه</a>
-                        <a role="tab" className={`tab ${reportDateFilter.mode === 'range' ? 'tab-active' : ''} ${reportView === 'attendanceList' ? 'tab-disabled' : ''}`} onClick={() => { if (reportView !== 'attendanceList') { handleModeChange('range'); } }}>بازه زمانی</a>
+                        <a role="tab" className={`tab ${localFilter.mode === 'month' ? 'tab-active' : ''}`} onClick={() => handleLocalModeChange('month')}>ماهانه</a>
+                        <a role="tab" className={`tab ${localFilter.mode === 'range' ? 'tab-active' : ''} ${reportView === 'attendanceList' ? 'tab-disabled' : ''}`} onClick={() => { if (reportView !== 'attendanceList') { handleLocalModeChange('range'); } }}>بازه زمانی</a>
                     </div>
                     <div className="p-2 flex items-center gap-4 flex-wrap">
-                        {reportDateFilter.mode === 'month' && reportDateFilter.from ? (
+                        {localFilter.mode === 'month' && localFilter.from && (
                             <DateSelector
-                                date={reportDateFilter.from}
-                                onDateChange={d => handleDateChange('from', d)}
+                                date={localFilter.from}
+                                onDateChange={d => handleLocalDateChange('from', d)}
                             />
-                        ) : (
+                        )}
+                        {localFilter.mode === 'range' && (
                              <>
-                                {reportDateFilter.from && <DateSelector
+                                {localFilter.from && <DateSelector
                                     label="از:"
-                                    date={reportDateFilter.from}
-                                    onDateChange={d => handleDateChange('from', d)}
+                                    date={localFilter.from}
+                                    onDateChange={d => handleLocalDateChange('from', d)}
                                 />}
-                                 {reportDateFilter.to && <DateSelector
+                                 {localFilter.to && <DateSelector
                                     label="تا:"
-                                    date={reportDateFilter.to}
-                                    onDateChange={d => handleDateChange('to', d)}
+                                    date={localFilter.to}
+                                    onDateChange={d => handleLocalDateChange('to', d)}
                                 />}
                             </>
                         )}
+                        <button onClick={handleApplyFilter} className="btn btn-primary btn-sm">اعمال</button>
                     </div>
                  </div>
 
