@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Document, Employee } from '../types';
-import { fileSystemManager } from '../utils/db';
+import { storageManager } from '../utils/db';
 import { useEmployeeStore } from './useEmployeeStore';
 
 /**
@@ -48,7 +48,7 @@ export const useDocumentStore = create(
                 const filePath = `documents/${projectId}/${folderName}/${fileName}`;
                 
                 try {
-                    await fileSystemManager.writeFile(filePath, file);
+                    await storageManager.saveFile(filePath, file);
                     const newDoc: Document = {
                         ...docData,
                         id: crypto.randomUUID(),
@@ -78,12 +78,16 @@ export const useDocumentStore = create(
             },
 
             getDownloadableFile: async (doc) => {
-                return fileSystemManager.readFile(doc.filePath);
+                const blob = await storageManager.readFile(doc.filePath);
+                if (blob) {
+                    return new File([blob], doc.fileName, { type: doc.fileType });
+                }
+                return null;
             },
 
             deleteDocument: async (docToDelete) => {
                 try {
-                    await fileSystemManager.remove(docToDelete.filePath);
+                    await storageManager.deleteFile(docToDelete.filePath);
                     set(state => {
                         const projectDocs = state.projectDocuments[docToDelete.projectId] || [];
                         const updatedDocs = projectDocs.filter(d => d.id !== docToDelete.id);
@@ -104,8 +108,8 @@ export const useDocumentStore = create(
                 const folderName = getEmployeeFolderName(employee);
 
                 if (folderName) {
-                    const employeeDirPath = `documents/${projectId}/${folderName}`;
-                    await fileSystemManager.remove(employeeDirPath);
+                    const employeeDirPath = `documents/${projectId}/${folderName}/`;
+                    await storageManager.deleteDirectory(employeeDirPath);
                 } else {
                     console.warn(`Could not determine folder name for employee ${employeeId}. Metadata will be removed, but the folder might remain if it exists under a different name.`);
                 }
@@ -123,8 +127,8 @@ export const useDocumentStore = create(
             },
 
             removeProjectDocuments: async (projectId) => {
-                const projectDirPath = `documents/${projectId}`;
-                await fileSystemManager.remove(projectDirPath);
+                const projectDirPath = `documents/${projectId}/`;
+                await storageManager.deleteDirectory(projectDirPath);
                 set(state => {
                     const newProjectDocuments = { ...state.projectDocuments };
                     delete newProjectDocuments[projectId];
@@ -137,8 +141,8 @@ export const useDocumentStore = create(
             },
 
             clearAndRestoreDocuments: async (documents) => {
-                // This is a simplified restore. It assumes files are already in place.
-                // It just restores the metadata.
+                // This is a simplified restore. It assumes files are NOT in place and just restores metadata.
+                // The user needs to restore the files manually if needed (e.g. from a separate backup).
                 const docsByProject: { [projectId: string]: Document[] } = {};
                 documents.forEach(doc => {
                     if (!docsByProject[doc.projectId]) {

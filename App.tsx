@@ -10,67 +10,30 @@ import { useAppStore } from './stores/useAppStore';
 import ToastContainer from './components/ToastContainer';
 import { useThemeStore } from './stores/useThemeStore';
 import Footer from './components/Footer';
-import { fileSystemManager } from './utils/db';
-import { useSettingsStore } from './stores/useSettingsStore';
-import { runBackup } from './utils/backup';
-import { useToastStore } from './stores/useToastStore';
+import { storageManager } from './utils/db';
 
 const App: React.FC = () => {
     const { view } = useAppStore();
     const { theme } = useThemeStore();
-    const { setLastAutoBackupTimestamp } = useSettingsStore();
-    const addToast = useToastStore(s => s.addToast);
-    const [isFsReady, setIsFsReady] = useState(false);
-    const [fsError, setFsError] = useState('');
+    const [isStorageReady, setIsStorageReady] = useState(false);
+    const [storageError, setStorageError] = useState('');
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
     }, [theme]);
 
-    // File System and Auto-backup initialization
+    // Storage Initialization
     useEffect(() => {
         const initApp = async () => {
-            const { success, message } = await fileSystemManager.initialize();
+            const { success, message } = await storageManager.initialize();
             if (success) {
-                setIsFsReady(true);
-                // After FS is ready, check for auto-backup
-                // We get the project ID from the store directly to avoid stale closures in the single-run useEffect
-                const activeProjectId = useAppStore.getState().currentProjectId;
-                if (activeProjectId) {
-                    const settings = useSettingsStore.getState().getSettings(activeProjectId);
-                    const { autoBackupInterval, lastAutoBackupTimestamp = 0 } = settings;
-                    if (autoBackupInterval === 'none') return;
-
-                    const now = Date.now();
-                    const oneDay = 24 * 60 * 60 * 1000;
-                    const oneWeek = 7 * oneDay;
-                    let shouldBackup = false;
-
-                    if (autoBackupInterval === 'daily' && now - lastAutoBackupTimestamp > oneDay) {
-                        shouldBackup = true;
-                    } else if (autoBackupInterval === 'weekly' && now - lastAutoBackupTimestamp > oneWeek) {
-                        shouldBackup = true;
-                    }
-                    
-                    if (shouldBackup) {
-                        console.log(`Auto-backup triggered for interval: ${autoBackupInterval}`);
-                        addToast(`پشتیبان‌گیری خودکار (${autoBackupInterval === 'daily' ? 'روزانه' : 'هفتگی'}) در حال انجام است...`, 'info');
-                        const { success: backupSuccess, fileName } = await runBackup({ isAuto: true });
-                        if (backupSuccess) {
-                            useSettingsStore.getState().setLastAutoBackupTimestamp(activeProjectId, now);
-                            addToast(`پشتیبان‌گیری خودکار با موفقیت در فایل "${fileName}" انجام شد.`, 'success');
-                        } else {
-                            addToast('پشتیبان‌گیری خودکار با خطا مواجه شد.', 'error');
-                        }
-                    }
-                }
+                setIsStorageReady(true);
             } else {
-                setFsError(message);
+                setStorageError(message);
             }
         };
         initApp();
-    }, []); // Run only once on initial app load
-
+    }, []); 
 
     // Register Service Worker for offline capabilities
     useEffect(() => {
@@ -88,6 +51,23 @@ const App: React.FC = () => {
     }, []);
 
     const renderView = () => {
+        if (!isStorageReady) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                    {storageError ? (
+                        <div className="alert alert-error">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span>خطا در راه‌اندازی ذخیره‌سازی: {storageError}</span>
+                        </div>
+                    ) : (
+                        <>
+                            <span className="loading loading-lg loading-spinner"></span>
+                            <p>در حال آماده‌سازی برنامه...</p>
+                        </>
+                    )}
+                </div>
+            )
+        }
         switch (view) {
             case 'dashboard':
                 return <Dashboard />;
@@ -98,7 +78,7 @@ const App: React.FC = () => {
             case 'reports':
                 return <Reports />;
             case 'settings':
-                return <SettingsPage onFsReady={() => setIsFsReady(true)} />;
+                return <SettingsPage />;
             default:
                 return <Dashboard />;
         }

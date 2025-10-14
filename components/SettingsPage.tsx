@@ -6,10 +6,9 @@ import { useFinancialStore } from '../stores/useFinancialStore';
 import { useAppStore } from '../stores/useAppStore';
 import { useToastStore } from '../stores/useToastStore';
 import ConfirmationModal from './ConfirmationModal';
-import { Settings, CustomAttendanceCode, Document } from '../types';
+import { Settings, CustomAttendanceCode } from '../types';
 import { useNotesStore } from '../stores/useNotesStore';
 import { useDocumentStore } from '../stores/useDocumentStore';
-import { fileSystemManager } from '../utils/db';
 import { runBackup } from '../utils/backup';
 
 const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
@@ -73,12 +72,7 @@ const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     );
 }
 
-interface SettingsPageProps {
-    onFsReady: () => void;
-}
-
-
-const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
+const SettingsPage: React.FC = () => {
     const { projects, addProject, updateProject, removeProject } = useCompanyStore();
     const { currentProjectId, setCurrentProjectId } = useAppStore();
     const addToast = useToastStore(state => state.addToast);
@@ -100,21 +94,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
     const [salaryMode, setSalaryMode] = useState(projectSettings.salaryMode);
     const [isAiAssistantEnabled, setIsAiAssistantEnabled] = useState(projectSettings.isAiAssistantEnabled);
     const [geminiApiKey, setGeminiApiKey] = useState(projectSettings.geminiApiKey);
-    const [autoBackupInterval, setAutoBackupInterval] = useState(projectSettings.autoBackupInterval);
     
     const [newProjectName, setNewProjectName] = useState('');
     const [editingProject, setEditingProject] = useState<{ id: string, name: string } | null>(null);
 
     const [projectToRemove, setProjectToRemove] = useState<{ id: string; name: string } | null>(null);
     const [isRestoring, setIsRestoring] = useState(false);
-    
-    const [isFsSupported, setIsFsSupported] = useState(true);
-    const [isFsHandleSet, setIsFsHandleSet] = useState(false);
-
-    useEffect(() => {
-        setIsFsSupported(fileSystemManager.isSupported());
-        setIsFsHandleSet(fileSystemManager.hasHandle());
-    }, []);
+    const fileRestoreInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const project = projects.find(p => p.id === projectId);
@@ -127,24 +113,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
         setSalaryMode(settings.salaryMode || 'project');
         setIsAiAssistantEnabled(settings.isAiAssistantEnabled);
         setGeminiApiKey(settings.geminiApiKey);
-        setAutoBackupInterval(settings.autoBackupInterval || 'none');
     }, [projectId, projects, getSettings]);
-
-    const handleRequestDir = async () => {
-        const success = await fileSystemManager.requestDirectoryPermission();
-        if (success) {
-            setIsFsHandleSet(true);
-            onFsReady();
-            addToast("پوشه با موفقیت انتخاب شد و دسترسی لازم تایید گردید.", 'success');
-        } else {
-            addToast("عملیات انتخاب پوشه لغو شد یا با خطا مواجه گردید.", 'warning');
-        }
-    };
     
     const handleSaveProjectDetails = () => {
         if (!currentProject) return;
         updateProject(currentProject.id, { companyName });
-        updateSettings(projectId, { baseDayCount, currency, salaryMode, autoBackupInterval });
+        updateSettings(projectId, { baseDayCount, currency, salaryMode });
         addToast(`اطلاعات و تنظیمات پروژه "${currentProject.name}" ذخیره شد.`, 'success');
     };
 
@@ -209,18 +183,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
     const handleBackup = async () => {
         const { success, fileName } = await runBackup({ isAuto: false });
         if (success) {
-            addToast(`فایل پشتیبان با نام "${fileName}" در پوشه backups ذخیره شد.`, 'success');
+            addToast(`فایل پشتیبان با نام "${fileName}" در حال دانلود است...`, 'success');
         } else {
             addToast("عملیات پشتیبان‌گیری با خطا مواجه شد.", "error");
         }
     };
     
-    const handleRestoreRequest = async () => {
+    const handleRestoreRequest = () => {
+        fileRestoreInputRef.current?.click();
+    };
+
+    const handleRestoreFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
         try {
-            const [fileHandle] = await (window as any).showOpenFilePicker({
-                types: [{ description: 'Karkard Backup Files', accept: { 'application/json': ['.json'] } }],
-            });
-            const file = await fileHandle.getFile();
             const text = await file.text();
             const backupData = JSON.parse(text);
 
@@ -236,10 +213,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
             if (err instanceof DOMException && err.name === 'AbortError') {
                  addToast('عملیات بازیابی لغو شد.', 'info');
             } else {
-                addToast('خطا در انتخاب فایل برای بازیابی.', 'error');
+                addToast('خطا در انتخاب یا پردازش فایل برای بازیابی.', 'error');
+            }
+        } finally {
+             if (fileRestoreInputRef.current) {
+                fileRestoreInputRef.current.value = '';
             }
         }
     };
+
 
     const confirmRestore = async () => {
         const backupData = (window as any)._restoreData;
@@ -267,32 +249,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
 
     const { restoreState: restoreCompanyState } = useCompanyStore();
 
-
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
-             <details className="collapse collapse-arrow bg-base-100 shadow-sm" open>
-                <summary className="collapse-title text-xl font-bold">مدیریت ذخیره‌سازی</summary>
-                <div className="collapse-content">
-                     {!isFsSupported ? (
-                        <div className="alert alert-error">مرورگر شما از قابلیت ذخیره‌سازی مستقیم پشتیبانی نمی‌کند. لطفاً از آخرین نسخه کروم، اج یا اپرا استفاده کنید.</div>
-                     ) : (
-                        <div className="p-4 bg-base-200 rounded-lg flex items-center justify-between">
-                            <div>
-                                <h3 className="font-bold">پوشه ذخیره‌سازی داده‌ها</h3>
-                                {isFsHandleSet ? (
-                                    <p className="text-sm text-green-600">پوشه با موفقیت انتخاب شده و دسترسی لازم برقرار است.</p>
-                                ) : (
-                                    <p className="text-sm text-yellow-600">هنوز هیچ پوشه‌ای انتخاب نشده است. برای استفاده از برنامه، انتخاب پوشه الزامی است.</p>
-                                )}
-                            </div>
-                            <button className="btn btn-primary" onClick={handleRequestDir}>
-                                {isFsHandleSet ? 'تغییر پوشه' : 'انتخاب پوشه'}
-                            </button>
-                        </div>
-                     )}
-                </div>
-            </details>
-
             <details className="collapse collapse-arrow bg-base-100 shadow-sm" open>
                 <summary className="collapse-title text-xl font-bold">مدیریت پروژه‌ها</summary>
                 <div className="collapse-content">
@@ -414,38 +372,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
             </>
             )}
 
-            <details className="collapse collapse-arrow bg-base-100 shadow-sm">
+            <details className="collapse collapse-arrow bg-base-100 shadow-sm" open>
                 <summary className="collapse-title text-xl font-bold">پشتیبان‌گیری و بازیابی</summary>
                 <div className="collapse-content">
                     <div className="space-y-4">
                          <p className="text-sm text-base-content/70">
-                            فایل‌های پشتیبان در زیرپوشه‌ای به نام `backups` در پوشه اصلی برنامه شما ذخیره می‌شوند. برای بازیابی، فایل مورد نظر را از سیستم خود انتخاب کنید.
+                            برای ایجاد فایل پشتیبان، روی دکمه مربوطه کلیک کنید تا فایل در کامپیوتر شما ذخیره شود. برای بازیابی، فایل پشتیبان خود را انتخاب کنید.
                         </p>
-                        <div className="form-control p-4 border rounded-lg">
-                            <label className="label font-semibold"><span className="label-text">پشتیبان‌گیری خودکار</span></label>
-                             <div className="flex gap-4">
-                                <label className="flex items-center cursor-pointer">
-                                    <input type="radio" name="autoBackup" value="none" checked={autoBackupInterval === 'none'} onChange={(e) => setAutoBackupInterval(e.target.value as Settings['autoBackupInterval'])} className="radio radio-sm" />
-                                    <span className="label-text mr-2">هرگز</span> 
-                                </label>
-                                <label className="flex items-center cursor-pointer">
-                                    <input type="radio" name="autoBackup" value="daily" checked={autoBackupInterval === 'daily'} onChange={(e) => setAutoBackupInterval(e.target.value as Settings['autoBackupInterval'])} className="radio radio-sm" />
-                                    <span className="label-text mr-2">روزانه</span> 
-                                </label>
-                                <label className="flex items-center cursor-pointer">
-                                    <input type="radio" name="autoBackup" value="weekly" checked={autoBackupInterval === 'weekly'} onChange={(e) => setAutoBackupInterval(e.target.value as Settings['autoBackupInterval'])} className="radio radio-sm" />
-                                    <span className="label-text mr-2">هفتگی</span> 
-                                </label>
-                            </div>
-                            {projectSettings.lastAutoBackupTimestamp ? (
-                                <p className="text-xs text-base-content/60 mt-2">آخرین پشتیبان‌گیری خودکار: {new Date(projectSettings.lastAutoBackupTimestamp).toLocaleString('fa-IR')}</p>
-                            ) : null}
-                        </div>
                     </div>
                    
                     <div className="flex items-center space-x-4 space-x-reverse mt-6 pt-4 border-t border-base-300">
-                        <button onClick={handleBackup} className="btn btn-success" disabled={!isFsHandleSet}>ایجاد فایل پشتیبان دستی</button>
-                        <button onClick={handleRestoreRequest} className="btn btn-warning" disabled={!isFsHandleSet}>بازیابی از فایل</button>
+                        <button onClick={handleBackup} className="btn btn-success">ایجاد فایل پشتیبان</button>
+                        <button onClick={handleRestoreRequest} className="btn btn-warning">بازیابی از فایل</button>
+                        <input type="file" accept=".json" className="hidden" ref={fileRestoreInputRef} onChange={handleRestoreFileSelected} />
                     </div>
                 </div>
             </details>

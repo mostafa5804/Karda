@@ -20,7 +20,7 @@ const ToastContainer: React.FC = () => {
     };
 
     return (
-        <div className="toast toast-top toast-center z-[100]">
+        <div className="toast toast-top toast-center z-[9999]">
             {toasts.map(toast => (
                 <div key={toast.id} className={`alert ${getToastClassName(toast.type)} shadow-lg flex`}>
                     <div className="flex-1">

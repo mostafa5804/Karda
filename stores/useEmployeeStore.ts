@@ -28,18 +28,15 @@ interface EmployeeState {
 
 const emptyProjectData: ProjectData = { employees: [], attendance: {} };
 
-const generateEmployeeFolderName = (
-    employeeData: { firstName?: string; lastName?: string; nationalId?: string },
+// A fallback for creating folder names when a national ID is not available (e.g., during attendance-only import)
+const generateFallbackFolderName = (
+    employeeData: { firstName?: string; lastName?: string; },
     uniqueId: string
 ): string => {
-    const sanitize = (name: string) => name.replace(/[\/\\?%*:|"<>.\s]/g, '_');
-    
-    const firstName = sanitize(employeeData.firstName || 'نام');
-    const lastName = sanitize(employeeData.lastName || 'نام_خانوادگی');
-    
-    // Use last 4 digits of nationalId for uniqueness, fallback to part of the uniqueId
-    const uniqueIdentifier = (employeeData.nationalId || '').slice(-4) || uniqueId.slice(-4);
-    
+    const sanitize = (name: string) => (name || 'unknown').replace(/[\/\\?%*:|"<>.\s]/g, '_');
+    const firstName = sanitize(employeeData.firstName);
+    const lastName = sanitize(employeeData.lastName);
+    const uniqueIdentifier = uniqueId.slice(-6);
     return `${firstName}_${lastName}_${uniqueIdentifier}`;
 };
 
@@ -59,7 +56,8 @@ export const useEmployeeStore = create(
                     const project = state.getProjectData(projectId);
                     
                     const newEmployeeId = new Date().toISOString() + Math.random();
-                    const documentsFolderName = generateEmployeeFolderName(employeeData, newEmployeeId);
+                    // Use the mandatory and unique national ID for the folder name.
+                    const documentsFolderName = employeeData.nationalId!;
 
                     newEmployee = {
                         ...employeeData,
@@ -185,7 +183,7 @@ export const useEmployeeStore = create(
                     } else {
                         // Add new employee
                         const newEmployeeId = new Date().toISOString() + Math.random() + (newEmployeesAdded++);
-                        const documentsFolderName = generateEmployeeFolderName(row, newEmployeeId);
+                        const documentsFolderName = generateFallbackFolderName(row, newEmployeeId);
                         const newEmployee: Employee = {
                             id: newEmployeeId,
                             lastName: row.lastName,
@@ -220,7 +218,8 @@ export const useEmployeeStore = create(
                     } else {
                         // Add new
                         const newEmployeeId = new Date().toISOString() + Math.random();
-                        const documentsFolderName = generateEmployeeFolderName(p, newEmployeeId);
+                        // Use the mandatory national ID for the folder name.
+                        const documentsFolderName = p.nationalId;
                         const newEmployee: Employee = {
                             id: newEmployeeId,
                             isArchived: false,

@@ -4,7 +4,6 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { useFinancialStore } from '../stores/useFinancialStore';
 import { useNotesStore } from '../stores/useNotesStore';
 import { useDocumentStore } from '../stores/useDocumentStore';
-import { fileSystemManager } from './db';
 
 // A helper function to get state from non-hook stores
 const getBackupState = () => {
@@ -34,9 +33,16 @@ export const runBackup = async ({ isAuto }: { isAuto: boolean }): Promise<{ succ
         const timeStr = new Date().toLocaleTimeString('en-GB').replace(/:/g, '-');
         
         const fileName = `karkard-backup-${dateStr}-${timeStr}.json`;
-        const filePath = isAuto ? `backups/auto/${fileName}` : `backups/${fileName}`;
         
-        await fileSystemManager.writeFile(filePath, JSON.stringify(backupData, null, 2));
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
         
         return { success: true, fileName };
 
