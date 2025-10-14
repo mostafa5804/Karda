@@ -62,10 +62,6 @@
                 margin: 1cm;
             }
         }
-        body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
         body * {
           visibility: hidden;
         }
@@ -85,25 +81,19 @@
          .print-area table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9pt;
         }
         .print-area th, .print-area td {
-            border: 1px solid #333;
+            border: 0.5pt solid #999; /* Softer borders for both modes */
             padding: 4px;
             text-align: center;
         }
-        .print-area.payslip-print-area table {
-            font-size: 11pt;
-        }
-        .print-area h1, .print-area h2, .print-area p {
-            text-align: center;
-        }
+        .print-area.payslip-print-area table { font-size: 11pt; }
+        .print-area h1, .print-area h2, .print-area p { text-align: center; }
 
-        /* Monochrome & better border styles */
+        /* --- MONOCHROME MODE --- */
         .print-monochrome {
             -webkit-print-color-adjust: economy !important;
             print-color-adjust: economy !important;
-            color: #000 !important;
         }
         .print-monochrome * {
             color: #000 !important;
@@ -111,14 +101,23 @@
             box-shadow: none !important;
             text-shadow: none !important;
         }
-        .print-monochrome th, .print-monochrome td {
-            border: 0.5pt solid #999 !important; /* Softer, consistent borders */
-        }
         .print-monochrome thead tr {
             background-color: #f2f2f2 !important; /* Light gray for header row */
         }
-        .print-monochrome .font-bold {
-            font-weight: bold;
+        .print-monochrome .table-alternating-rows tbody tr:nth-child(even) {
+            background-color: #f9f9f9 !important; /* Alternating rows for summary/personnel */
+        }
+        .print-monochrome img {
+            filter: grayscale(100%);
+        }
+
+        /* --- COLOR MODE --- */
+        .print-color {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .print-color .table-alternating-rows tbody tr:nth-child(even) {
+            background-color: #f9f9f9 !important; /* Subtle alternating rows */
         }
 
         /* Specific styles for AttendanceSummaryReport */
@@ -136,6 +135,7 @@
         .summary-report-print .numeric-col {
             width: 5%;
         }
+        .print-area table.attendance-list-report { font-size: 9pt; }
       }
     </style>
 <script type="importmap">

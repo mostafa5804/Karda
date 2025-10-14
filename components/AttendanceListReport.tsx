@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppStore } from '../stores/useAppStore';
 import { useCompanyStore } from '../stores/useCompanyStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 import { getDaysInJalaliMonth, getFirstDayOfMonthJalali, getFormattedDate } from '../utils/calendar';
 import { JALALI_MONTHS, JALALI_DAYS_ABBR, ICONS } from '../constants';
-import { Employee, EmployeeAttendance, Settings } from '../types';
+import { Employee, EmployeeAttendance, Settings, CustomAttendanceCode } from '../types';
+import { getContrastingTextColor } from '../utils/color';
 
 interface AttendanceListReportProps {
     employees: Employee[];
@@ -15,12 +17,19 @@ interface AttendanceListReportProps {
 const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, attendance, settings, projectId }) => {
     const { reportDateFilter } = useAppStore();
     const { projects } = useCompanyStore();
+    const [printMode, setPrintMode] = useState<'color' | 'monochrome'>('monochrome');
     
     // This report is always for a single month, taken from the 'from' part of the filter
     const { year: selectedYear, month: selectedMonth } = reportDateFilter.from;
 
     const daysInMonth = getDaysInJalaliMonth(selectedYear, selectedMonth);
     const firstDay = getFirstDayOfMonthJalali(selectedYear, selectedMonth);
+
+    const customCodeMap = useMemo(() => {
+        const map = new Map<string, CustomAttendanceCode>();
+        settings.customCodes.forEach(code => map.set(code.char.toLowerCase(), code));
+        return map;
+    }, [settings.customCodes]);
 
     const handlePrint = () => {
         const style = document.createElement('style');
@@ -31,11 +40,21 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
         document.getElementById('print-landscape-style')?.remove();
     };
 
-    const currentProjectName = projects.find(p => p.id === projectId)?.name || '';
+    const currentProject = projects.find(p => p.id === projectId);
 
     const ReportHeader = () => (
-        <div className="mb-4 text-center">
-            <h1 className="text-xl font-bold">لیست کارکرد پرسنل پروژه {currentProjectName} ( {JALALI_MONTHS[selectedMonth - 1]} ماه ) {selectedYear}</h1>
+        <div className="mb-4">
+            <div className="flex justify-between items-center border-b-2 border-black pb-2">
+                <div className="w-1/4 flex justify-center">
+                    {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                </div>
+                <div className="w-1/2 text-center">
+                    <h1 className="text-xl font-bold">{currentProject?.companyName}</h1>
+                    <h2 className="text-lg">لیست کارکرد پرسنل پروژه: {currentProject?.name}</h2>
+                    <p>({JALALI_MONTHS[selectedMonth - 1]} ماه {selectedYear})</p>
+                </div>
+                <div className="w-1/4" />
+            </div>
         </div>
     );
     
@@ -55,14 +74,18 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
             const date = getFormattedDate(selectedYear, selectedMonth, day);
             const dayOfWeek = (firstDay + i) % 7;
             const override = settings.dayTypeOverrides[date];
-            let dayType = override || (dayOfWeek === 6 ? 'friday' : (settings.holidays.includes(date) ? 'holiday' : 'normal'));
+            const isFriday = override === 'friday' || (!override && dayOfWeek === 6);
+            const isHoliday = override === 'holiday' || (!override && settings.holidays.includes(date));
 
-            let headerBg = 'bg-gray-200';
-            if (dayType === 'friday') headerBg = 'bg-green-300';
-            else if (dayType === 'holiday') headerBg = 'bg-yellow-300';
+            const headerStyle: React.CSSProperties = {};
+            if (isFriday) {
+                headerStyle.backgroundColor = settings.customCodes.find(c => c.id === 'system-friday-work')?.color || '#dcfce7';
+            } else if (isHoliday) {
+                headerStyle.backgroundColor = settings.customCodes.find(c => c.id === 'system-holiday-work')?.color || '#fee2e2';
+            }
             
             return (
-                <th key={day} className={`border border-black p-1 text-center font-normal text-xs ${headerBg}`}>
+                <th key={day} className="border border-black p-1 text-center font-normal" style={headerStyle}>
                     <div>{JALALI_DAYS_ABBR[dayOfWeek]}</div>
                     <div>{day}</div>
                 </th>
@@ -72,10 +95,10 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
         return (
             <thead>
                 <tr>
-                    <th className="border border-black p-1 bg-gray-200 w-8">ردیف</th>
-                    <th className="border border-black p-1 bg-gray-200 min-w-[150px]">نام و نام خانوادگی</th>
+                    <th className="border border-black p-1 w-8">ردیف</th>
+                    <th className="border border-black p-1 min-w-[150px]">نام و نام خانوادگی</th>
                     {dayHeaders}
-                    <th className="border border-black p-1 bg-gray-200">جمع کل</th>
+                    <th className="border border-black p-1">جمع کل</th>
                 </tr>
             </thead>
         );
@@ -87,24 +110,45 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
                 {employees.map((employee, index) => {
                     const employeeAttendance = attendance[employee.id] || {};
                     let hasSettlement = false;
-                    // FIX: Explicitly type `sum` as `number` to avoid type inference issues.
                     const totalHours = Object.values(employeeAttendance).reduce((sum: number, value) => {
                         const strValue = String(value);
                         if (strValue.toLowerCase() === 'ت') hasSettlement = true;
                         const hours = parseFloat(strValue);
                         return sum + (isNaN(hours) ? 0 : hours);
                     }, 0);
-                    const rowBg = hasSettlement ? 'bg-red-100' : '';
+                    
+                    const settlementCodeColor = customCodeMap.get('ت')?.color;
+                    const rowStyle = hasSettlement ? { backgroundColor: settlementCodeColor || '#E9D5FF' } : {};
+
 
                     return (
-                        <tr key={employee.id} className={rowBg}>
+                        <tr key={employee.id} style={rowStyle}>
                             <td className="border border-black p-1 text-center">{index + 1}</td>
                             <td className="border border-black p-1 text-right">{`${employee.lastName} ${employee.firstName}`}</td>
                             {Array.from({ length: daysInMonth }, (_, i) => {
                                 const day = i + 1;
                                 const date = getFormattedDate(selectedYear, selectedMonth, day);
                                 const value = employeeAttendance[date] || '';
-                                return (<td key={date} className="border border-black p-1 text-center">{value}</td>);
+                                
+                                const cellStyle: React.CSSProperties = {};
+                                const customCode = customCodeMap.get(String(value).toLowerCase());
+                                if (customCode) {
+                                    cellStyle.backgroundColor = customCode.color;
+                                    cellStyle.color = getContrastingTextColor(customCode.color);
+                                } else {
+                                    const dayOfWeek = (firstDay + i) % 7;
+                                    const override = settings.dayTypeOverrides[date];
+                                    const isFriday = override === 'friday' || (!override && dayOfWeek === 6);
+                                    const isHoliday = override === 'holiday' || (!override && settings.holidays.includes(date));
+                                    
+                                    if (isFriday) {
+                                        cellStyle.backgroundColor = settings.customCodes.find(c => c.id === 'system-friday-work')?.color;
+                                    } else if (isHoliday) {
+                                        cellStyle.backgroundColor = settings.customCodes.find(c => c.id === 'system-holiday-work')?.color;
+                                    }
+                                }
+
+                                return (<td key={date} className="border border-black p-1 text-center" style={cellStyle}>{value}</td>);
                             })}
                             <td className="border border-black p-1 text-center font-bold">{totalHours}</td>
                         </tr>
@@ -116,7 +160,7 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
 
     return (
         <div className="bg-white p-6 rounded-lg shadow">
-             <div className="flex justify-between items-center mb-4 no-print">
+             <div className="flex justify-between items-center mb-4 no-print flex-wrap gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">
                         لیست کارکرد
@@ -125,19 +169,25 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
                         این گزارش برای چاپ افقی در صفحه A4 بهینه شده است.
                     </p>
                 </div>
-                <button
-                    onClick={handlePrint}
-                    className="btn btn-primary"
-                    disabled={employees.length === 0}
-                >
-                    {ICONS.print}
-                    <span className="mr-2">چاپ گزارش</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <div className="join">
+                        <input className="join-item btn btn-sm" type="radio" name="print_options_list" aria-label="رنگی" value="color" checked={printMode === 'color'} onChange={() => setPrintMode('color')} />
+                        <input className="join-item btn btn-sm" type="radio" name="print_options_list" aria-label="سیاه‌وسفید" value="monochrome" checked={printMode === 'monochrome'} onChange={() => setPrintMode('monochrome')} />
+                    </div>
+                    <button
+                        onClick={handlePrint}
+                        className="btn btn-primary"
+                        disabled={employees.length === 0}
+                    >
+                        {ICONS.print}
+                        <span className="mr-2">چاپ گزارش</span>
+                    </button>
+                </div>
             </div>
             {employees.length > 0 ? (
-                <div className="print-area bg-white p-2 border rounded-md overflow-x-auto print-monochrome">
+                <div className={`print-area bg-white p-2 border rounded-md overflow-x-auto print-${printMode}`}>
                      <ReportHeader />
-                     <table className="w-full border-collapse border border-black text-xs">
+                     <table className="w-full border-collapse border border-black attendance-list-report">
                         {renderHeader()}
                         {renderBody()}
                      </table>

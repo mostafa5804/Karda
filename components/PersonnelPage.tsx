@@ -49,6 +49,7 @@ const PersonnelPage: React.FC = () => {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [importedData, setImportedData] = useState<Partial<Employee>[] | null>(null);
     const fileImportInputRef = useRef<HTMLInputElement>(null);
+    const [printMode, setPrintMode] = useState<'color' | 'monochrome'>('monochrome');
 
     const filteredEmployees = useMemo(() => {
         const lowerCaseQuery = searchQuery.toLowerCase();
@@ -162,7 +163,7 @@ const PersonnelPage: React.FC = () => {
         return <div className="text-center p-8 bg-base-100 rounded-lg shadow">لطفاً ابتدا یک پروژه را انتخاب کنید.</div>
     }
 
-    const currentProjectName = projects.find(p => p.id === projectId)?.name || '';
+    const currentProject = projects.find(p => p.id === projectId);
 
     return (
         <div className="space-y-6">
@@ -176,12 +177,16 @@ const PersonnelPage: React.FC = () => {
                     className="input input-bordered w-full max-w-xs"
                 />
                 <div className="flex items-center gap-2 flex-wrap">
+                     <div className="join">
+                        <input className="join-item btn btn-sm btn-outline" type="radio" name="print_options_personnel" aria-label="رنگی" value="color" checked={printMode === 'color'} onChange={() => setPrintMode('color')} />
+                        <input className="join-item btn btn-sm btn-outline" type="radio" name="print_options_personnel" aria-label="سیاه‌وسفید" value="monochrome" checked={printMode === 'monochrome'} onChange={() => setPrintMode('monochrome')} />
+                    </div>
                     <button onClick={handlePrint} className="btn btn-outline">{ICONS.print} <span className="mr-1">چاپ</span></button>
                     <div className="dropdown dropdown-end">
                         <label tabIndex={0} className="btn btn-outline">عملیات اکسل</label>
                         <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                             <li><a onClick={() => fileImportInputRef.current?.click()}>{ICONS.upload}<span className="mr-2">ورود از اکسل</span></a></li>
-                            <li><a onClick={() => exportPersonnelToExcel(employees, currentProjectName)}>{ICONS.download}<span className="mr-2">خروجی اکسل</span></a></li>
+                            <li><a onClick={() => exportPersonnelToExcel(employees, currentProject?.name || '')}>{ICONS.download}<span className="mr-2">خروجی اکسل</span></a></li>
                             <div className="divider my-1"></div>
                             <li><a onClick={downloadPersonnelTemplate}>دانلود فایل نمونه</a></li>
                         </ul>
@@ -222,21 +227,39 @@ const PersonnelPage: React.FC = () => {
                 </div>
             )}
 
-            <div className="bg-base-100 rounded-lg shadow overflow-x-auto print-area personnel-print-area">
-                 <h1 className="text-xl font-bold text-center p-4 hidden print:block">لیست پرسنل پروژه: {currentProjectName}</h1>
-                <table className="w-full text-sm text-right">
+            <div className={`bg-base-100 rounded-lg shadow overflow-x-auto print-area personnel-print-area print-${printMode}`}>
+                <div className="hidden print:block p-4">
+                    <div className="flex justify-between items-center border-b-2 border-black pb-2">
+                        <div className="w-1/4 flex justify-center">
+                            {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                        </div>
+                        <div className="w-1/2 text-center">
+                            <h1 className="text-xl font-bold">{currentProject?.companyName}</h1>
+                            <h2 className="text-lg">لیست پرسنل پروژه: {currentProject?.name}</h2>
+                        </div>
+                        <div className="w-1/4" />
+                    </div>
+                </div>
+                <table className="w-full text-sm text-right table-alternating-rows">
                     <thead className="bg-base-200 text-base-content/80">
                         <tr>
                             <th className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" onChange={e => handleSelectAll(e.target.checked)} checked={sortedEmployees.length > 0 && selectedIds.size === sortedEmployees.length}/></th>
-                            {/* FIX: Removed explicit generic type `<Employee>` from SortableTableHeader to allow TypeScript to correctly infer types from props, which resolves the 'children' prop error. */}
-                            <SortableTableHeader sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
-                            <SortableTableHeader sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
-                            <SortableTableHeader sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
-                            <SortableTableHeader sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            <SortableTableHeader sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>حقوق ماهانه</SortableTableHeader>
-                            <SortableTableHeader sortKey="contractStartDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>شروع قرارداد</SortableTableHeader>
-                            <SortableTableHeader sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>پایان قرارداد</SortableTableHeader>
-                            <SortableTableHeader sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''}`}>تاریخ تسویه</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>حقوق ماهانه</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="contractStartDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>شروع قرارداد</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>پایان قرارداد</SortableTableHeader>
+                            {/* FIX: Explicitly specify the generic type <Employee> to resolve a TypeScript inference issue. */}
+                            <SortableTableHeader<Employee> sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''}`}>تاریخ تسویه</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
                     </thead>

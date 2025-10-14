@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Employee } from '../types';
 import { useAppStore } from '../stores/useAppStore';
 import { useEmployeeStore } from '../stores/useEmployeeStore';
@@ -24,6 +24,8 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
     const settings = useSettingsStore().getSettings(projectId);
     const { projectFinancials } = useFinancialStore();
     const { projects } = useCompanyStore();
+    const [printMode, setPrintMode] = useState<'color' | 'monochrome'>('monochrome');
+
 
     const currentProject = projects.find(p => p.id === projectId);
 
@@ -59,15 +61,21 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-lg shadow">
-                <div className="flex justify-between items-center mb-4 no-print">
+                <div className="flex justify-between items-center mb-4 no-print flex-wrap gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-800">گزارش فردی: {employee.lastName} {employee.firstName}</h1>
                         <p className="text-gray-600">{reportTitle}</p>
                     </div>
-                    <button onClick={handlePrint} className="btn btn-primary">{ICONS.print} <span className="mr-2">چاپ فیش حقوقی</span></button>
+                    <div className="flex items-center gap-2">
+                        <div className="join">
+                            <input className="join-item btn btn-sm" type="radio" name="print_options_individual" aria-label="رنگی" value="color" checked={printMode === 'color'} onChange={() => setPrintMode('color')} />
+                            <input className="join-item btn btn-sm" type="radio" name="print_options_individual" aria-label="سیاه‌وسفید" value="monochrome" checked={printMode === 'monochrome'} onChange={() => setPrintMode('monochrome')} />
+                        </div>
+                        <button onClick={handlePrint} className="btn btn-primary">{ICONS.print} <span className="mr-2">چاپ فیش حقوقی</span></button>
+                    </div>
                 </div>
                 
-                <div className="print-area payslip-print-area">
+                <div className={`print-area payslip-print-area print-${printMode}`}>
                     {/* This part is visible on screen and print */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-md mb-6">
                         <div><strong className="block text-sm text-gray-500">نام:</strong><span>{employee.lastName} {employee.firstName}</span></div>

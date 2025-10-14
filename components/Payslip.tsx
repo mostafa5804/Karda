@@ -57,10 +57,18 @@ const Payslip: React.FC<PayslipProps> = ({ employee, reportData, settings, proje
 
     return (
         <div className="bg-base-100 p-4 border rounded-lg">
-            <header className="text-center border-b-2 border-base-content pb-4 mb-4">
-                <h2 className="text-xl font-bold">{project.companyName}</h2>
-                <h3 className="text-lg">فیش حقوقی پروژه: {project.name}</h3>
-                <p className="text-base-content/80">{dateRangeString}</p>
+            <header className="border-b-2 border-base-content pb-4 mb-4">
+                <div className="flex justify-between items-center">
+                    <div className="w-1/4 flex justify-center">
+                        {project.companyLogo && <img src={project.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                    </div>
+                    <div className="w-1/2 text-center">
+                        <h2 className="text-xl font-bold">{project.companyName}</h2>
+                        <h3 className="text-lg">فیش حقوقی پروژه: {project.name}</h3>
+                        <p className="text-base-content/80">{dateRangeString}</p>
+                    </div>
+                    <div className="w-1/4" />
+                </div>
             </header>
 
             <div className="grid grid-cols-2 gap-4">

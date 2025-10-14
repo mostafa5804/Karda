@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppStore } from '../stores/useAppStore';
 import { useCompanyStore } from '../stores/useCompanyStore';
 import { generateAttendanceSummary } from '../utils/reports';
@@ -15,6 +15,7 @@ interface AttendanceSummaryReportProps {
 const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ employees, attendance, settings, projectId }) => {
     const { reportDateFilter } = useAppStore();
     const { projects } = useCompanyStore();
+    const [printMode, setPrintMode] = useState<'color' | 'monochrome'>('monochrome');
 
     const currentProject = projects.find(p => p.id === projectId);
 
@@ -29,7 +30,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
     const ReportHeader = () => {
         const { mode, from, to } = reportDateFilter;
         let dateString;
-        if (mode === 'month') {
+        if (mode === 'month' || (from.year === to.year && from.month === to.month)) {
             dateString = `ماه: ${JALALI_MONTHS[from.month - 1]} سال: ${from.year}`;
         } else {
              dateString = `از ${JALALI_MONTHS[from.month - 1]} ${from.year} تا ${JALALI_MONTHS[to.month - 1]} ${to.year}`;
@@ -39,7 +40,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
             <div className="mb-4">
                 <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
                     <div className="w-1/4 flex justify-center">
-                        {/* Placeholder for the right logo from the image */}
+                        {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
                     </div>
                     <div className="w-1/2 text-center">
                         <h1 className="text-xl font-bold">{currentProject?.companyName}</h1>
@@ -47,7 +48,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
                         <p>گزارش کار پروژه: {currentProject?.name}</p>
                     </div>
                     <div className="w-1/4 flex justify-center">
-                        {currentProject?.companyLogo && <img src={currentProject.companyLogo} alt="Company Logo" className="h-16 w-auto" />}
+                        {/* This div is for balance */}
                     </div>
                 </div>
                 <div className="text-center font-semibold">
@@ -68,7 +69,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
     );
     
     const reportTitle = useMemo(() => {
-        const { mode, from, to } = reportDateFilter;
+        const { mode } = reportDateFilter;
         if (mode === 'month') {
             return `گزارش کارکرد کلی`;
         }
@@ -78,7 +79,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
 
     return (
         <div className="bg-white p-6 rounded-lg shadow">
-             <div className="flex justify-between items-center mb-4 no-print">
+             <div className="flex justify-between items-center mb-4 no-print flex-wrap gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">
                         {reportTitle}
@@ -87,20 +88,26 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
                         این گزارش برای چاپ در صفحه A4 عمودی بهینه شده است.
                     </p>
                 </div>
-                <button
-                    onClick={handlePrint}
-                    className="btn btn-primary"
-                    disabled={data.length === 0}
-                >
-                    {ICONS.print}
-                    <span className="mr-2">چاپ گزارش</span>
-                </button>
+                <div className="flex items-center gap-2">
+                     <div className="join">
+                        <input className="join-item btn btn-sm" type="radio" name="print_options" aria-label="رنگی" value="color" checked={printMode === 'color'} onChange={() => setPrintMode('color')} />
+                        <input className="join-item btn btn-sm" type="radio" name="print_options" aria-label="سیاه‌وسفید" value="monochrome" checked={printMode === 'monochrome'} onChange={() => setPrintMode('monochrome')} />
+                    </div>
+                    <button
+                        onClick={handlePrint}
+                        className="btn btn-primary"
+                        disabled={data.length === 0}
+                    >
+                        {ICONS.print}
+                        <span className="mr-2">چاپ گزارش</span>
+                    </button>
+                </div>
             </div>
 
             {data.length > 0 ? (
-                <div className="print-area bg-white p-4 border rounded-md print-monochrome summary-report-print">
+                <div className={`print-area bg-white p-4 border rounded-md print-${printMode} summary-report-print`}>
                     <ReportHeader />
-                    <table className="w-full text-center border-collapse border border-black mt-4">
+                    <table className="w-full text-center border-collapse border border-black mt-4 table-alternating-rows">
                         <thead>
                             <tr className="bg-gray-200">
                                 <th className="border border-black p-1">ردیف</th>
