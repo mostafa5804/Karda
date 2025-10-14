@@ -8,6 +8,7 @@ interface SettingsState {
     };
     getSettings: (projectId: string) => Settings;
     updateSettings: (projectId: string, newSettings: Partial<Omit<Settings, 'customCodes'>>) => void;
+    setLastAutoBackupTimestamp: (projectId: string, timestamp: number) => void;
     setDayOverride: (projectId: string, date: string, type: 'normal' | 'friday' | 'holiday' | null) => void;
     addCustomCode: (projectId: string, code: Omit<CustomAttendanceCode, 'id'>) => boolean;
     updateCustomCode: (projectId: string, codeId: string, updates: Partial<CustomAttendanceCode>) => boolean;
@@ -31,6 +32,8 @@ const initialSettings: Settings = {
     ],
     isAiAssistantEnabled: false,
     geminiApiKey: '',
+    autoBackupInterval: 'none',
+    lastAutoBackupTimestamp: 0,
 };
 
 export const useSettingsStore = create(
@@ -59,6 +62,15 @@ export const useSettingsStore = create(
                     projectSettings: {
                         ...state.projectSettings,
                         [projectId]: { ...currentSettings, ...newSettings },
+                    },
+                };
+            }),
+             setLastAutoBackupTimestamp: (projectId, timestamp) => set((state) => {
+                const currentSettings = state.getSettings(projectId);
+                return {
+                    projectSettings: {
+                        ...state.projectSettings,
+                        [projectId]: { ...currentSettings, lastAutoBackupTimestamp: timestamp },
                     },
                 };
             }),

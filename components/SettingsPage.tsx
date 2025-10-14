@@ -10,6 +10,7 @@ import { Settings, CustomAttendanceCode, Document } from '../types';
 import { useNotesStore } from '../stores/useNotesStore';
 import { useDocumentStore } from '../stores/useDocumentStore';
 import { fileSystemManager } from '../utils/db';
+import { runBackup } from '../utils/backup';
 
 const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     const { getSettings, addCustomCode, updateCustomCode, removeCustomCode } = useSettingsStore();
@@ -65,7 +66,6 @@ const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     );
 }
 
-// FIX: Define the props interface for the component.
 interface SettingsPageProps {
     onFsReady: () => void;
 }
@@ -79,11 +79,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
     const projectId = currentProjectId || 'default';
     const currentProject = projects.find(p => p.id === projectId);
     
-    const { getSettings, updateSettings, removeProjectSettings, getStateForBackup: getSettingsState, restoreState: restoreSettingsState } = useSettingsStore();
-    const { removeProjectData, getStateForBackup: getEmployeeState, restoreState: restoreEmployeeState } = useEmployeeStore();
-    const { removeProjectFinancials, getStateForBackup: getFinancialState, restoreState: restoreFinancialState } = useFinancialStore();
-    const { removeProjectNotes, getStateForBackup: getNotesState, restoreState: restoreNotesState } = useNotesStore();
-    const { removeProjectDocuments, getAllDocuments, clearAndRestoreDocuments } = useDocumentStore();
+    const { getSettings, updateSettings, removeProjectSettings, restoreState: restoreSettingsState } = useSettingsStore();
+    const { removeProjectData, restoreState: restoreEmployeeState } = useEmployeeStore();
+    const { removeProjectFinancials, restoreState: restoreFinancialState } = useFinancialStore();
+    const { removeProjectNotes, restoreState: restoreNotesState } = useNotesStore();
+    const { removeProjectDocuments, clearAndRestoreDocuments } = useDocumentStore();
     
     const projectSettings = getSettings(projectId);
 
@@ -93,6 +93,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
     const [salaryMode, setSalaryMode] = useState(projectSettings.salaryMode);
     const [isAiAssistantEnabled, setIsAiAssistantEnabled] = useState(projectSettings.isAiAssistantEnabled);
     const [geminiApiKey, setGeminiApiKey] = useState(projectSettings.geminiApiKey);
+    const [autoBackupInterval, setAutoBackupInterval] = useState(projectSettings.autoBackupInterval);
     
     const [newProjectName, setNewProjectName] = useState('');
     const [editingProject, setEditingProject] = useState<{ id: string, name: string } | null>(null);
@@ -119,6 +120,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
         setSalaryMode(settings.salaryMode || 'project');
         setIsAiAssistantEnabled(settings.isAiAssistantEnabled);
         setGeminiApiKey(settings.geminiApiKey);
+        setAutoBackupInterval(settings.autoBackupInterval || 'none');
     }, [projectId, projects, getSettings]);
 
     const handleRequestDir = async () => {
@@ -135,7 +137,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
     const handleSaveProjectDetails = () => {
         if (!currentProject) return;
         updateProject(currentProject.id, { companyName });
-        updateSettings(projectId, { baseDayCount, currency, salaryMode });
+        updateSettings(projectId, { baseDayCount, currency, salaryMode, autoBackupInterval });
         addToast(`اطلاعات و تنظیمات پروژه "${currentProject.name}" ذخیره شد.`, 'success');
     };
 
@@ -197,41 +199,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
         setProjectToRemove(null);
     };
 
-    const { getStateForBackup: getCompanyState, restoreState: restoreCompanyState } = useCompanyStore();
-
     const handleBackup = async () => {
-        try {
-            const companyState = getCompanyState();
-            const employeeState = getEmployeeState();
-            const settingsState = getSettingsState();
-            const financialState = getFinancialState();
-            const notesState = getNotesState();
-            const documents = getAllDocuments();
-
-            const backupData = {
-                projects: companyState.projects,
-                employees: employeeState,
-                settings: settingsState,
-                financials: financialState,
-                notes: notesState,
-                documents: documents,
-                backupVersion: '3.0.0',
-                backupDate: new Date().toISOString(),
-            };
-
-            const fileName = `karda-backup-${new Date().toLocaleDateString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}.json`;
-            await fileSystemManager.writeFile(`backups/${fileName}`, JSON.stringify(backupData, null, 2));
+        const { success, fileName } = await runBackup({ isAuto: false });
+        if (success) {
             addToast(`فایل پشتیبان با نام "${fileName}" در پوشه backups ذخیره شد.`, 'success');
-
-        } catch (error) {
-            console.error("Backup failed:", error);
+        } else {
             addToast("عملیات پشتیبان‌گیری با خطا مواجه شد.", "error");
         }
     };
     
     const handleRestoreRequest = async () => {
         try {
-            // FIX: The 'showOpenFilePicker' method is not part of the standard Window type. Cast to 'any' to access it.
             const [fileHandle] = await (window as any).showOpenFilePicker({
                 types: [{ description: 'Karda Backup Files', accept: { 'application/json': ['.json'] } }],
             });
@@ -243,14 +221,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
                 throw new Error('فایل پشتیبان معتبر نیست.');
             }
             
-            // Show confirmation modal
             setIsRestoring(true);
-            // Store data temporarily for confirmation
             (window as any)._restoreData = backupData;
 
         } catch (err) {
             console.error("Error selecting restore file:", err);
-            addToast('فایلی برای بازیابی انتخاب نشد.', 'info');
+            if (err instanceof DOMException && err.name === 'AbortError') {
+                 addToast('عملیات بازیابی لغو شد.', 'info');
+            } else {
+                addToast('خطا در انتخاب فایل برای بازیابی.', 'error');
+            }
         }
     };
 
@@ -265,7 +245,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
             restoreFinancialState(backupData.financials || { projectFinancials: {} });
             restoreNotesState(backupData.notes || { projectNotes: {} });
             
-            // Document restore only restores metadata. User must ensure files exist.
             await clearAndRestoreDocuments(backupData.documents || []);
 
             addToast('اطلاعات با موفقیت بازیابی شد. صفحه مجددا بارگذاری می‌شود.', 'success');
@@ -278,6 +257,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
             delete (window as any)._restoreData;
         }
     };
+
+    const { restoreState: restoreCompanyState } = useCompanyStore();
 
 
     return (
@@ -429,11 +410,34 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
             <details className="collapse collapse-arrow bg-base-100 shadow-sm">
                 <summary className="collapse-title text-xl font-bold">پشتیبان‌گیری و بازیابی</summary>
                 <div className="collapse-content">
-                    <p className="text-sm text-base-content/70 mb-4">
-                        فایل‌های پشتیبان در زیرپوشه‌ای به نام `backups` در پوشه اصلی برنامه شما ذخیره می‌شوند. برای بازیابی، فایل مورد نظر را از سیستم خود انتخاب کنید.
-                    </p>
+                    <div className="space-y-4">
+                         <p className="text-sm text-base-content/70">
+                            فایل‌های پشتیبان در زیرپوشه‌ای به نام `backups` در پوشه اصلی برنامه شما ذخیره می‌شوند. برای بازیابی، فایل مورد نظر را از سیستم خود انتخاب کنید.
+                        </p>
+                        <div className="form-control p-4 border rounded-lg">
+                            <label className="label font-semibold"><span className="label-text">پشتیبان‌گیری خودکار</span></label>
+                             <div className="flex gap-4">
+                                <label className="flex items-center cursor-pointer">
+                                    <input type="radio" name="autoBackup" value="none" checked={autoBackupInterval === 'none'} onChange={(e) => setAutoBackupInterval(e.target.value as Settings['autoBackupInterval'])} className="radio radio-sm" />
+                                    <span className="label-text mr-2">هرگز</span> 
+                                </label>
+                                <label className="flex items-center cursor-pointer">
+                                    <input type="radio" name="autoBackup" value="daily" checked={autoBackupInterval === 'daily'} onChange={(e) => setAutoBackupInterval(e.target.value as Settings['autoBackupInterval'])} className="radio radio-sm" />
+                                    <span className="label-text mr-2">روزانه</span> 
+                                </label>
+                                <label className="flex items-center cursor-pointer">
+                                    <input type="radio" name="autoBackup" value="weekly" checked={autoBackupInterval === 'weekly'} onChange={(e) => setAutoBackupInterval(e.target.value as Settings['autoBackupInterval'])} className="radio radio-sm" />
+                                    <span className="label-text mr-2">هفتگی</span> 
+                                </label>
+                            </div>
+                            {projectSettings.lastAutoBackupTimestamp ? (
+                                <p className="text-xs text-base-content/60 mt-2">آخرین پشتیبان‌گیری خودکار: {new Date(projectSettings.lastAutoBackupTimestamp).toLocaleString('fa-IR')}</p>
+                            ) : null}
+                        </div>
+                    </div>
+                   
                     <div className="flex items-center space-x-4 space-x-reverse mt-6 pt-4 border-t border-base-300">
-                        <button onClick={handleBackup} className="btn btn-success" disabled={!isFsHandleSet}>ایجاد فایل پشتیبان</button>
+                        <button onClick={handleBackup} className="btn btn-success" disabled={!isFsHandleSet}>ایجاد فایل پشتیبان دستی</button>
                         <button onClick={handleRestoreRequest} className="btn btn-warning" disabled={!isFsHandleSet}>بازیابی از فایل</button>
                     </div>
                 </div>

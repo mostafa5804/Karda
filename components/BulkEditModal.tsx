@@ -17,6 +17,7 @@ const initialFormState: Partial<UpdatableFields> = {
     militaryServiceStatus: undefined,
     contractStartDate: '',
     contractEndDate: '',
+    settlementDate: '',
     baseSalary: 0,
     housingAllowance: 0,
     childAllowance: 0,
@@ -34,6 +35,7 @@ const initialFieldsToUpdateState: Record<keyof UpdatableFields, boolean> = {
     iban: false,
     contractStartDate: false,
     contractEndDate: false,
+    settlementDate: false,
     baseSalary: false,
     housingAllowance: false,
     childAllowance: false,
@@ -142,6 +144,14 @@ const BulkEditModal: React.FC<BulkEditModalProps> = ({ isOpen, onClose, onSave, 
                             <div className="form-control flex-grow">
                                 <label className="label"><span className="label-text">تاریخ پایان قرارداد</span></label>
                                 <input type="text" name="contractEndDate" placeholder="مثال: 1404-01-14" value={formData.contractEndDate} onChange={handleChange} className="input input-bordered" disabled={!fieldsToUpdate.contractEndDate} />
+                            </div>
+                        </div>
+                        {/* Settlement Date */}
+                         <div className="flex items-center gap-2">
+                            <input type="checkbox" name="settlementDate" checked={fieldsToUpdate.settlementDate} onChange={handleCheckboxChange} className="checkbox" />
+                            <div className="form-control flex-grow">
+                                <label className="label"><span className="label-text">تاریخ تسویه</span></label>
+                                <input type="text" name="settlementDate" placeholder="YYYY-MM-DD یا خالی برای حذف" value={formData.settlementDate} onChange={handleChange} className="input input-bordered" disabled={!fieldsToUpdate.settlementDate} />
                             </div>
                         </div>
                     </div>

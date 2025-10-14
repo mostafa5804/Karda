@@ -100,9 +100,6 @@ const Reports: React.FC = () => {
         setView('reports');
         setReportView('individual');
         setSelectedEmployeeIdForReport(employeeId);
-        // The individual report component uses selectedYear/Month.
-        // Set them to the last month of the range for context.
-        setSelectedDate(reportDateFilter.to.year, reportDateFilter.to.month);
     };
     
     const totalPayAllEmployees = salaryReportData.reduce((sum, item) => sum + item.totalPay, 0);
@@ -126,7 +123,7 @@ const Reports: React.FC = () => {
     
     const reportTitle = useMemo(() => {
         const { mode, from, to } = reportDateFilter;
-        if (mode === 'month') {
+        if (mode === 'month' || (from.year === to.year && from.month === to.month)) {
             return `${JALALI_MONTHS[from.month - 1]} ${from.year}`;
         }
         return `از ${JALALI_MONTHS[from.month - 1]} ${from.year} تا ${JALALI_MONTHS[to.month - 1]} ${to.year}`;
@@ -214,7 +211,13 @@ const Reports: React.FC = () => {
                  <div role="tablist" className="tabs tabs-boxed">
                     <a role="tab" className={`tab ${reportView === 'salary' ? 'tab-active' : ''}`} onClick={() => setReportView('salary')}>مبلغ حقوق</a> 
                     <a role="tab" className={`tab ${reportView === 'attendanceSummary' ? 'tab-active' : ''}`} onClick={() => setReportView('attendanceSummary')}>کارکرد کلی</a>
-                    <a role="tab" className={`tab ${reportView === 'attendanceList' ? 'tab-active' : ''} ${localFilter.mode === 'range' ? 'tab-disabled' : ''}`} onClick={() => localFilter.mode !== 'range' && setReportView('attendanceList')}>لیست کارکرد</a>
+                    <a role="tab" className={`tab ${reportView === 'attendanceList' ? 'tab-active' : ''}`} onClick={() => {
+                        setReportView('attendanceList');
+                        // If in range mode, switch to month mode to make this report usable
+                        if (localFilter.mode === 'range') {
+                             setLocalFilter(f => ({...f, mode: 'month'}));
+                        }
+                    }}>لیست کارکرد</a>
                     <a role="tab" className={`tab ${reportView === 'individual' ? 'tab-active' : ''}`} onClick={() => setReportView('individual')}>گزارش فردی</a>
                 </div>
                 

@@ -57,7 +57,7 @@ const AttendanceTable: React.FC = () => {
     const handleAttendanceChange = (employeeId: string, date: string, value: string) => {
         const trimmedValue = value.trim();
         if (trimmedValue === '') {
-            setAttendance(projectId, employeeId, date, '');
+            setAttendance(projectId, employeeId, date, '', selectedYear, selectedMonth);
             return;
         }
 
@@ -66,7 +66,7 @@ const AttendanceTable: React.FC = () => {
         const isValidCode = validCodeChars.has(trimmedValue.toLowerCase());
 
         if (isValidNumber || isValidCode) {
-            setAttendance(projectId, employeeId, date, trimmedValue);
+            setAttendance(projectId, employeeId, date, trimmedValue, selectedYear, selectedMonth);
         } else {
             addToast(`مقدار وارد شده نامعتبر است. فقط اعداد بین ۱ تا ۲۳ یا کدهای تعریف شده مجاز هستند.`, 'warning');
         }
@@ -129,8 +129,12 @@ const AttendanceTable: React.FC = () => {
     };
 
     const renderBody = () => {
-        return activeEmployees.map((employee, index) => (
-            <tr key={employee.id} className="hover:bg-gray-50 h-12">
+        return activeEmployees.map((employee, index) => {
+            const settlementDateInMonth = employee.settlementDate && employee.settlementDate.startsWith(`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`);
+            const rowClass = settlementDateInMonth ? 'bg-purple-50' : 'hover:bg-gray-50';
+
+            return (
+            <tr key={employee.id} className={`${rowClass} h-12`}>
                 <td className="p-2 border border-gray-300 text-center sticky left-0 bg-white z-10 w-[45px]">{index + 1}</td>
                 <td className="p-2 border border-gray-300 sticky left-[45px] bg-white z-10 min-w-[120px] whitespace-nowrap">{employee.lastName}</td>
                 <td className="p-2 border border-gray-300 sticky left-[175px] bg-white z-10 min-w-[100px] whitespace-nowrap">{employee.firstName}</td>
@@ -157,7 +161,7 @@ const AttendanceTable: React.FC = () => {
                     );
                 })}
             </tr>
-        ));
+        )});
     };
 
     return (

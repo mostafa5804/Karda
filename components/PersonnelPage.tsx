@@ -188,25 +188,22 @@ const PersonnelPage: React.FC = () => {
                     <thead className="bg-base-200 text-base-content/80">
                         <tr>
                             <th className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" onChange={e => handleSelectAll(e.target.checked)} checked={sortedEmployees.length > 0 && selectedIds.size === sortedEmployees.length}/></th>
-                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
+                            {/* FIX: Added children to SortableTableHeader components to provide header text. */}
                             <SortableTableHeader sortKey="lastName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام خانوادگی</SortableTableHeader>
-                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
                             <SortableTableHeader sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
-                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
                             <SortableTableHeader sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
-                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
                             <SortableTableHeader sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
                             <SortableTableHeader sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className="p-3">حقوق ماهانه</SortableTableHeader>
-                            {/* FIX: Added required 'children' prop to SortableTableHeader components to provide the header text. */}
-                            <SortableTableHeader sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className="p-3">پایان قرارداد</SortableTableHeader>
+                            <SortableTableHeader sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className="p-3">تاریخ تسویه</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedEmployees.map(emp => {
                             const isExpired = emp.contractEndDate && new Date(emp.contractEndDate.replace(/-/g, '/')) < new Date();
-                            const rowClass = emp.isArchived ? 'bg-base-200 text-base-content/40' : (isExpired ? 'bg-red-50' : 'bg-base-100');
+                            let rowClass = emp.isArchived ? 'bg-base-200 text-base-content/40' : (isExpired ? 'bg-red-50' : 'bg-base-100');
+                            if (emp.settlementDate) rowClass = 'bg-purple-50';
+
                             return (
                                 <tr key={emp.id} className={`border-t border-base-200 hover:bg-base-200 ${rowClass}`}>
                                     <td className="p-3 no-print"><input type="checkbox" className="checkbox checkbox-sm" checked={selectedIds.has(emp.id)} onChange={e => handleSelect(emp.id, e.target.checked)}/></td>
@@ -215,7 +212,7 @@ const PersonnelPage: React.FC = () => {
                                     <td className="p-3 font-mono">{emp.nationalId}</td>
                                     <td className="p-3">{emp.position}</td>
                                     <td className="p-3">{formatCurrency(emp.monthlySalary, settings.currency)}</td>
-                                    <td className={`p-3 ${isExpired ? 'font-bold text-red-600' : ''}`}>{emp.contractEndDate}</td>
+                                    <td className={`p-3 ${emp.settlementDate ? 'font-bold text-purple-600' : ''}`}>{emp.settlementDate || '-'}</td>
                                     <td className="p-3 text-center whitespace-nowrap no-print">
                                         <button onClick={() => handleOpenDetailsModal(emp)} className="btn btn-xs btn-ghost text-blue-600">ویرایش</button>
                                         <button onClick={() => toggleEmployeeArchiveStatus(projectId, emp.id)} className="btn btn-xs btn-ghost text-yellow-600">

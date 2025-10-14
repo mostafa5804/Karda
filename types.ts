@@ -1,3 +1,5 @@
+import { FileSystemDirectoryHandle } from 'idb';
+
 export type View = 'dashboard' | 'attendance' | 'personnel' | 'reports' | 'settings';
 export type ReportView = 'salary' | 'attendanceSummary' | 'attendanceList' | 'individual';
 
@@ -18,6 +20,7 @@ export interface Employee {
     iban?: string;
     contractStartDate?: string;
     contractEndDate?: string;
+    settlementDate?: string; // Date of settlement
     // Fields for official (labor law) salary calculation
     baseSalary?: number;
     housingAllowance?: number;
@@ -48,6 +51,8 @@ export interface Settings {
     customCodes: CustomAttendanceCode[];
     isAiAssistantEnabled: boolean;
     geminiApiKey: string;
+    autoBackupInterval: 'none' | 'daily' | 'weekly';
+    lastAutoBackupTimestamp?: number;
 }
 
 export interface MonthlyFinancials {

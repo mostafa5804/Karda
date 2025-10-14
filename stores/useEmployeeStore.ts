@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Employee, EmployeeAttendance, ParsedExcelRow } from '../types';
+import { getDaysInJalaliMonth, getFormattedDate } from '../utils/calendar';
 
 interface ProjectData {
     employees: Employee[];
@@ -17,7 +18,7 @@ interface EmployeeState {
     bulkUpdateEmployees: (projectId: string, employeeIds: string[], updates: Partial<Omit<Employee, 'id'>>) => void;
     toggleEmployeeArchiveStatus: (projectId: string, employeeId: string) => void;
     removeEmployee: (projectId: string, employeeId: string) => void;
-    setAttendance: (projectId: string, employeeId: string, date: string, status: string) => void;
+    setAttendance: (projectId: string, employeeId: string, date: string, status: string, year: number, month: number) => void;
     importAndUpsertData: (projectId: string, data: ParsedExcelRow[]) => void;
     upsertPersonnel: (projectId: string, personnelData: Partial<Employee>[]) => void;
     removeProjectData: (projectId: string) => void;
@@ -100,27 +101,47 @@ export const useEmployeeStore = create(
                     }
                 }
             }),
-            setAttendance: (projectId, employeeId, date, status) => set(state => {
+            setAttendance: (projectId, employeeId, date, status, year, month) => set(state => {
                 const project = state.getProjectData(projectId);
-                const employeeAttendance = project.attendance[employeeId] || {};
-                const newAttendance = {
-                    ...project.attendance,
-                    [employeeId]: {
-                        ...employeeAttendance,
-                        [date]: status
+                let updatedEmployees = [...project.employees];
+                const newAttendance = JSON.parse(JSON.stringify(project.attendance));
+                
+                if (!newAttendance[employeeId]) {
+                    newAttendance[employeeId] = {};
+                }
+                
+                newAttendance[employeeId][date] = status;
+
+                if (status.toLowerCase() === 'ت') {
+                    // Settlement logic
+                    const daysInMonth = getDaysInJalaliMonth(year, month);
+                    const settlementDay = parseInt(date.split('-')[2], 10);
+                    
+                    // Auto-fill the rest of the month
+                    for (let day = settlementDay + 1; day <= daysInMonth; day++) {
+                        const futureDate = getFormattedDate(year, month, day);
+                        newAttendance[employeeId][futureDate] = 'ت';
                     }
-                };
-                if (status === '' || status === null || status === undefined) {
+                    
+                    // Update employee's settlement date
+                    updatedEmployees = updatedEmployees.map(emp => {
+                        if (emp.id === employeeId) {
+                            return { ...emp, settlementDate: date };
+                        }
+                        return emp;
+                    });
+                } else if (status === '' || status === null || status === undefined) {
                     delete newAttendance[employeeId][date];
                 }
-                 if (Object.keys(newAttendance[employeeId]).length === 0) {
+
+                if (Object.keys(newAttendance[employeeId]).length === 0) {
                     delete newAttendance[employeeId];
                 }
 
                 return {
                     projectData: {
                         ...state.projectData,
-                        [projectId]: { ...project, attendance: newAttendance }
+                        [projectId]: { ...project, employees: updatedEmployees, attendance: newAttendance }
                     }
                 };
             }),

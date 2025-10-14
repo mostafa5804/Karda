@@ -56,6 +56,12 @@
                 margin: 1cm;
             }
         }
+        .payslip-print-area {
+            @page {
+                size: A4 portrait;
+                margin: 1cm;
+            }
+        }
         body {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -85,6 +91,9 @@
             border: 1px solid #333;
             padding: 4px;
             text-align: center;
+        }
+        .print-area.payslip-print-area table {
+            font-size: 11pt;
         }
         .print-area h1, .print-area h2, .print-area p {
             text-align: center;

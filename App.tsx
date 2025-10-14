@@ -11,6 +11,9 @@ import ToastContainer from './components/ToastContainer';
 import { useThemeStore } from './stores/useThemeStore';
 import Footer from './components/Footer';
 import { fileSystemManager } from './utils/db';
+import { useSettingsStore } from './stores/useSettingsStore';
+import { runBackup } from './utils/backup';
+import { useToastStore } from './stores/useToastStore';
 
 const DirectorySetupPrompt: React.FC<{ error?: string }> = ({ error }) => {
     const { setView } = useAppStore();
@@ -39,8 +42,10 @@ const DirectorySetupPrompt: React.FC<{ error?: string }> = ({ error }) => {
 };
 
 const App: React.FC = () => {
-    const { view, setView } = useAppStore();
+    const { view, setView, currentProjectId } = useAppStore();
     const { theme } = useThemeStore();
+    const { getSettings, setLastAutoBackupTimestamp } = useSettingsStore();
+    const addToast = useToastStore(s => s.addToast);
     const [isFsReady, setIsFsReady] = useState(false);
     const [fsError, setFsError] = useState('');
 
@@ -48,18 +53,48 @@ const App: React.FC = () => {
         document.documentElement.setAttribute('data-theme', theme);
     }, [theme]);
 
+    // File System and Auto-backup initialization
     useEffect(() => {
-        const initFs = async () => {
+        const initApp = async () => {
             const { success, message } = await fileSystemManager.initialize();
             if (success) {
                 setIsFsReady(true);
+                // After FS is ready, check for auto-backup
+                if (currentProjectId) {
+                    const settings = getSettings(currentProjectId);
+                    const { autoBackupInterval, lastAutoBackupTimestamp = 0 } = settings;
+                    if (autoBackupInterval === 'none') return;
+
+                    const now = Date.now();
+                    const oneDay = 24 * 60 * 60 * 1000;
+                    const oneWeek = 7 * oneDay;
+                    let shouldBackup = false;
+
+                    if (autoBackupInterval === 'daily' && now - lastAutoBackupTimestamp > oneDay) {
+                        shouldBackup = true;
+                    } else if (autoBackupInterval === 'weekly' && now - lastAutoBackupTimestamp > oneWeek) {
+                        shouldBackup = true;
+                    }
+                    
+                    if (shouldBackup) {
+                        console.log(`Auto-backup triggered for interval: ${autoBackupInterval}`);
+                        addToast(`پشتیبان‌گیری خودکار (${autoBackupInterval === 'daily' ? 'روزانه' : 'هفتگی'}) در حال انجام است...`, 'info');
+                        const { success: backupSuccess, fileName } = await runBackup({ isAuto: true });
+                        if (backupSuccess) {
+                            setLastAutoBackupTimestamp(currentProjectId, now);
+                            addToast(`پشتیبان‌گیری خودکار با موفقیت در فایل "${fileName}" انجام شد.`, 'success');
+                        } else {
+                            addToast('پشتیبان‌گیری خودکار با خطا مواجه شد.', 'error');
+                        }
+                    }
+                }
             } else {
                 setFsError(message);
-                // The prompt will be shown, and it forces the view to settings
             }
         };
-        initFs();
-    }, []);
+        initApp();
+    }, [isFsReady, currentProjectId]); // Re-run if projectId changes after initial load
+
 
     // Register Service Worker for offline capabilities
     useEffect(() => {

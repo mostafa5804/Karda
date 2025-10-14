@@ -165,13 +165,13 @@ const initialEmployeeState: Omit<Employee, 'id' | 'isArchived'> = {
     iban: '',
     contractStartDate: '',
     contractEndDate: '',
+    settlementDate: '',
     baseSalary: 0,
     housingAllowance: 0,
     childAllowance: 0,
     otherBenefits: 0,
 };
 
-// FIX: Define the props interface for the component.
 interface EmployeeDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -204,6 +204,7 @@ const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({ isOpen, onC
                 iban: employee.iban || '',
                 contractStartDate: employee.contractStartDate || '',
                 contractEndDate: employee.contractEndDate || '',
+                settlementDate: employee.settlementDate || '',
                 baseSalary: employee.baseSalary || 0,
                 housingAllowance: employee.housingAllowance || 0,
                 childAllowance: employee.childAllowance || 0,
@@ -362,6 +363,10 @@ const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({ isOpen, onC
                                 <div className="form-control">
                                     <label className="label"><span className="label-text">تاریخ پایان قرارداد</span></label>
                                     <input type="text" name="contractEndDate" value={formData.contractEndDate} onChange={handleChange} placeholder="مثال: 1404-01-14" className="input input-bordered" />
+                                </div>
+                                 <div className="form-control">
+                                    <label className="label"><span className="label-text">تاریخ تسویه</span></label>
+                                    <input type="text" name="settlementDate" value={formData.settlementDate} onChange={handleChange} placeholder="از طریق جدول کارکرد ثبت می‌شود" className="input input-bordered" />
                                 </div>
                                 
                                 <div className="form-control md:col-span-3">

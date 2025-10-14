@@ -13,8 +13,11 @@ interface AttendanceListReportProps {
 }
 
 const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, attendance, settings, projectId }) => {
-    const { selectedYear, selectedMonth } = useAppStore();
+    const { reportDateFilter } = useAppStore();
     const { projects } = useCompanyStore();
+    
+    // This report is always for a single month, taken from the 'from' part of the filter
+    const { year: selectedYear, month: selectedMonth } = reportDateFilter.from;
 
     const daysInMonth = getDaysInJalaliMonth(selectedYear, selectedMonth);
     const firstDay = getFirstDayOfMonthJalali(selectedYear, selectedMonth);

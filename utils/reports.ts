@@ -65,7 +65,10 @@ export const generateReport = (
             
             let presenceDays = 0, fridayWorkDays = 0, holidayWorkDays = 0;
 
+            let isSettled = false;
             for (let day = 1; day <= daysInMonth; day++) {
+                if (isSettled) continue;
+
                 const date = getFormattedDate(year, month, day);
                 const status = employeeAttendance[date] || '';
                 const dayOfWeek = (firstDay + day - 1) % 7;
@@ -91,6 +94,10 @@ export const generateReport = (
                         case 'غ': reportItem.absentDays++; break;
                         case 'م': reportItem.leaveDays++; break;
                         case 'ا': reportItem.sickDays++; break;
+                        case 'ت':
+                            presenceDays++; // Settlement day counts as a presence day
+                            isSettled = true;
+                            break;
                     }
                 }
             }
@@ -146,8 +153,11 @@ export const generateAttendanceSummary = (
             const summaryItem = aggregatedSummary.get(employee.id)!;
             const employeeAttendance = attendance[employee.id] || {};
             let hasSettlementInMonth = false;
+            let isSettled = false;
 
             for (let day = 1; day <= daysInMonth; day++) {
+                if (isSettled) continue;
+
                 const date = getFormattedDate(year, month, day);
                 const status = employeeAttendance[date] || '';
                 const dayOfWeek = (firstDay + day - 1) % 7;
@@ -175,7 +185,11 @@ export const generateAttendanceSummary = (
                         case 'غ': summaryItem.absentDays++; break;
                         case 'م': summaryItem.leaveDays++; break;
                         case 'ا': summaryItem.sickDays++; break;
-                        case 'ت': hasSettlementInMonth = true; break;
+                        case 'ت':
+                            hasSettlementInMonth = true;
+                            summaryItem.presenceDays++; // Count settlement day as presence
+                            isSettled = true;
+                            break;
                     }
                 }
             }
