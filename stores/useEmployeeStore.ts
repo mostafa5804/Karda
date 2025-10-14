@@ -13,7 +13,7 @@ interface EmployeeState {
         [projectId: string]: ProjectData;
     };
     getProjectData: (projectId: string) => ProjectData;
-    addEmployee: (projectId: string, employeeData: Omit<Employee, 'id' | 'isArchived'>) => void;
+    addEmployee: (projectId: string, employeeData: Omit<Employee, 'id' | 'isArchived'>) => Employee;
     updateEmployee: (projectId: string, employeeId: string, updates: Partial<Omit<Employee, 'id'>>) => void;
     bulkUpdateEmployees: (projectId: string, employeeIds: string[], updates: Partial<Omit<Employee, 'id'>>) => void;
     toggleEmployeeArchiveStatus: (projectId: string, employeeId: string) => void;
@@ -22,11 +22,27 @@ interface EmployeeState {
     importAndUpsertData: (projectId: string, data: ParsedExcelRow[]) => void;
     upsertPersonnel: (projectId: string, personnelData: Partial<Employee>[]) => void;
     removeProjectData: (projectId: string) => void;
-    getStateForBackup: () => Omit<EmployeeState, 'getProjectData'>;
-    restoreState: (state: Omit<EmployeeState, 'getProjectData'>) => void;
+    getStateForBackup: () => Omit<EmployeeState, 'getProjectData' | 'addEmployee'>;
+    restoreState: (state: Omit<EmployeeState, 'getProjectData' | 'addEmployee'>) => void;
 }
 
 const emptyProjectData: ProjectData = { employees: [], attendance: {} };
+
+const generateEmployeeFolderName = (
+    employeeData: { firstName?: string; lastName?: string; nationalId?: string },
+    uniqueId: string
+): string => {
+    const sanitize = (name: string) => name.replace(/[\/\\?%*:|"<>.\s]/g, '_');
+    
+    const firstName = sanitize(employeeData.firstName || 'نام');
+    const lastName = sanitize(employeeData.lastName || 'نام_خانوادگی');
+    
+    // Use last 4 digits of nationalId for uniqueness, fallback to part of the uniqueId
+    const uniqueIdentifier = (employeeData.nationalId || '').slice(-4) || uniqueId.slice(-4);
+    
+    return `${firstName}_${lastName}_${uniqueIdentifier}`;
+};
+
 
 export const useEmployeeStore = create(
     persist<EmployeeState>(
@@ -37,21 +53,30 @@ export const useEmployeeStore = create(
             getProjectData: (projectId) => {
                 return get().projectData[projectId] || emptyProjectData;
             },
-            addEmployee: (projectId, employeeData) => set(state => {
-                const project = state.getProjectData(projectId);
-                const newEmployee: Employee = {
-                    ...employeeData,
-                    id: new Date().toISOString() + Math.random(),
-                    isArchived: false,
-                };
-                const updatedEmployees = [...project.employees, newEmployee];
-                return {
-                    projectData: {
-                        ...state.projectData,
-                        [projectId]: { ...project, employees: updatedEmployees }
-                    }
-                };
-            }),
+            addEmployee: (projectId, employeeData) => {
+                let newEmployee: Employee | null = null;
+                set(state => {
+                    const project = state.getProjectData(projectId);
+                    
+                    const newEmployeeId = new Date().toISOString() + Math.random();
+                    const documentsFolderName = generateEmployeeFolderName(employeeData, newEmployeeId);
+
+                    newEmployee = {
+                        ...employeeData,
+                        id: newEmployeeId,
+                        isArchived: false,
+                        documentsFolderName,
+                    };
+                    const updatedEmployees = [...project.employees, newEmployee];
+                    return {
+                        projectData: {
+                            ...state.projectData,
+                            [projectId]: { ...project, employees: updatedEmployees }
+                        }
+                    };
+                });
+                return newEmployee!;
+            },
             updateEmployee: (projectId, employeeId, updates) => set(state => {
                 const project = state.getProjectData(projectId);
                 const updatedEmployees = project.employees.map(emp =>
@@ -159,13 +184,16 @@ export const useEmployeeStore = create(
                         newAttendance[existingEmp.id] = { ...(newAttendance[existingEmp.id] || {}), ...row.attendance };
                     } else {
                         // Add new employee
+                        const newEmployeeId = new Date().toISOString() + Math.random() + (newEmployeesAdded++);
+                        const documentsFolderName = generateEmployeeFolderName(row, newEmployeeId);
                         const newEmployee: Employee = {
-                            id: new Date().toISOString() + Math.random() + (newEmployeesAdded++),
+                            id: newEmployeeId,
                             lastName: row.lastName,
                             firstName: row.firstName,
                             position: row.position,
                             monthlySalary: row.monthlySalary,
                             isArchived: false,
+                            documentsFolderName,
                         };
                         existingEmployees.push(newEmployee);
                         newAttendance[newEmployee.id] = row.attendance;
@@ -191,14 +219,17 @@ export const useEmployeeStore = create(
                         updatedEmployees[existingIndex] = { ...updatedEmployees[existingIndex], ...p };
                     } else {
                         // Add new
+                        const newEmployeeId = new Date().toISOString() + Math.random();
+                        const documentsFolderName = generateEmployeeFolderName(p, newEmployeeId);
                         const newEmployee: Employee = {
-                            id: new Date().toISOString() + Math.random(),
+                            id: newEmployeeId,
                             isArchived: false,
                             firstName: '',
                             lastName: '',
                             position: '',
                             monthlySalary: 0,
                             ...p,
+                            documentsFolderName,
                         };
                         updatedEmployees.push(newEmployee);
                     }

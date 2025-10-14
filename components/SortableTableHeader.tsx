@@ -5,18 +5,17 @@ interface SortableTableHeaderProps<T> {
     sortKey: keyof T;
     sortConfig: SortConfig<T> | null;
     requestSort: (key: keyof T) => void;
-    children: React.ReactNode;
     className?: string;
 }
 
-// FIX: Changed to a const arrow function to avoid potential TSX parsing issues with generics.
+// FIX: Changed to a const arrow function and used React.PropsWithChildren to avoid TSX parsing issues with generics.
 const SortableTableHeader = <T extends object>({
     sortKey,
     sortConfig,
     requestSort,
     children,
     className
-}: SortableTableHeaderProps<T>) => {
+}: React.PropsWithChildren<SortableTableHeaderProps<T>>) => {
     
     const getSortIcon = (direction: SortDirection) => {
         if (!direction) return '↕';

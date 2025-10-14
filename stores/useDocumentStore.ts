@@ -1,7 +1,21 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Document } from '../types';
+import { Document, Employee } from '../types';
 import { fileSystemManager } from '../utils/db';
+import { useEmployeeStore } from './useEmployeeStore';
+
+/**
+ * Gets the folder name for an employee's documents.
+ * Returns the human-readable name if it exists (for new employees),
+ * otherwise falls back to the unique employee ID for backward compatibility.
+ * @param employee The employee object.
+ * @returns The folder name as a string, or null if employee not found.
+ */
+const getEmployeeFolderName = (employee: Employee | undefined): string | null => {
+    if (!employee) return null;
+    return employee.documentsFolderName || employee.id;
+};
+
 
 interface DocumentState {
     projectDocuments: { [projectId: string]: Document[] };
@@ -22,7 +36,16 @@ export const useDocumentStore = create(
             
             addDocument: async (docData, file) => {
                 const { projectId, employeeId, fileName } = docData;
-                const filePath = `documents/${projectId}/${employeeId}/${fileName}`;
+                
+                const employee = useEmployeeStore.getState().getProjectData(projectId).employees.find(e => e.id === employeeId);
+                const folderName = getEmployeeFolderName(employee);
+
+                if (!folderName) {
+                    console.error(`Cannot add document, employee ${employeeId} not found.`);
+                    return false;
+                }
+
+                const filePath = `documents/${projectId}/${folderName}/${fileName}`;
                 
                 try {
                     await fileSystemManager.writeFile(filePath, file);
@@ -77,8 +100,16 @@ export const useDocumentStore = create(
             },
 
             removeEmployeeDocuments: async (projectId, employeeId) => {
-                const employeeDirPath = `documents/${projectId}/${employeeId}`;
-                await fileSystemManager.remove(employeeDirPath);
+                const employee = useEmployeeStore.getState().getProjectData(projectId).employees.find(e => e.id === employeeId);
+                const folderName = getEmployeeFolderName(employee);
+
+                if (folderName) {
+                    const employeeDirPath = `documents/${projectId}/${folderName}`;
+                    await fileSystemManager.remove(employeeDirPath);
+                } else {
+                    console.warn(`Could not determine folder name for employee ${employeeId}. Metadata will be removed, but the folder might remain if it exists under a different name.`);
+                }
+
                 set(state => {
                     const projectDocs = state.projectDocuments[projectId] || [];
                     const remainingDocs = projectDocs.filter(d => d.employeeId !== employeeId);

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Employee } from '../types';
 
-type UpdatableFields = Omit<Employee, 'id' | 'isArchived' | 'firstName' | 'lastName' | 'nationalId' | 'fatherName'>;
+// FIX: Exclude documentsFolderName as it's not a user-updatable field and was causing a type error.
+type UpdatableFields = Omit<Employee, 'id' | 'isArchived' | 'firstName' | 'lastName' | 'nationalId' | 'fatherName' | 'documentsFolderName'>;
 
 interface BulkEditModalProps {
     isOpen: boolean;

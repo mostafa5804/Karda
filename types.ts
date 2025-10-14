@@ -21,6 +21,7 @@ export interface Employee {
     contractStartDate?: string;
     contractEndDate?: string;
     settlementDate?: string; // Date of settlement
+    documentsFolderName?: string; // The immutable, human-readable folder name for this employee's documents
     // Fields for official (labor law) salary calculation
     baseSalary?: number;
     housingAllowance?: number;

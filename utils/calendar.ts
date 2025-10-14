@@ -128,3 +128,21 @@ export const getFormattedDate = (year: number, month: number, day: number): stri
     const d = String(day).padStart(2, '0');
     return `${y}-${m}-${d}`;
 };
+
+export const isValidJalaliDateString = (dateString: string): boolean => {
+    // Check format YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return false;
+    }
+
+    const [year, month, day] = dateString.split('-').map(Number);
+    
+    // Check for reasonable year/month values
+    if (year < 1300 || year > 1500) return false;
+    if (month < 1 || month > 12) return false;
+
+    // Check if the day is valid for the given month and year
+    if (day < 1 || day > getDaysInJalaliMonth(year, month)) return false;
+
+    return true;
+};
