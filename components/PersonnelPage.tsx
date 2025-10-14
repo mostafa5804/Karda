@@ -255,10 +255,10 @@ const PersonnelPage: React.FC = () => {
                             <SortableTableHeader<Employee> sortKey="firstName" sortConfig={sortConfig} requestSort={requestSort} className="p-3">نام</SortableTableHeader>
                             <SortableTableHeader<Employee> sortKey="nationalId" sortConfig={sortConfig} requestSort={requestSort} className="p-3">کد ملی</SortableTableHeader>
                             <SortableTableHeader<Employee> sortKey="position" sortConfig={sortConfig} requestSort={requestSort} className="p-3">سمت</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>حقوق ماهانه</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="contractStartDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>شروع قرارداد</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>پایان قرارداد</SortableTableHeader>
-                            <SortableTableHeader<Employee> sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''}`}>تاریخ تسویه</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="monthlySalary" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden' : ''}`}>حقوق ماهانه</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="contractStartDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden' : ''}`}>شروع قرارداد</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="contractEndDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden' : ''}`}>پایان قرارداد</SortableTableHeader>
+                            <SortableTableHeader<Employee> sortKey="settlementDate" sortConfig={sortConfig} requestSort={requestSort} className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden' : ''}`}>تاریخ تسویه</SortableTableHeader>
                             <th className="p-3 text-center no-print">عملیات</th>
                         </tr>
                     </thead>
@@ -277,10 +277,10 @@ const PersonnelPage: React.FC = () => {
                                     <td className="p-3 print-no-wrap">{emp.firstName}</td>
                                     <td className="p-3 font-mono">{emp.nationalId}</td>
                                     <td className="p-3 print-no-wrap">{emp.position}</td>
-                                    <td className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden print:table-cell' : ''}`}>{formatCurrency(emp.monthlySalary, settings.currency)}</td>
-                                    <td className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden print:table-cell' : ''}`}>{emp.contractStartDate || '-'}</td>
-                                    <td className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden print:table-cell' : ''}`}>{emp.contractEndDate || '-'}</td>
-                                    <td className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden print:table-cell' : ''} ${emp.settlementDate ? 'font-bold text-purple-600' : ''}`}>{emp.settlementDate || '-'}</td>
+                                    <td className={`p-3 ${!visibleColumns?.monthlySalary ? 'hidden' : ''}`}>{formatCurrency(emp.monthlySalary, settings.currency)}</td>
+                                    <td className={`p-3 ${!visibleColumns?.contractStartDate ? 'hidden' : ''}`}>{emp.contractStartDate || '-'}</td>
+                                    <td className={`p-3 ${!visibleColumns?.contractEndDate ? 'hidden' : ''}`}>{emp.contractEndDate || '-'}</td>
+                                    <td className={`p-3 ${!visibleColumns?.settlementDate ? 'hidden' : ''} ${emp.settlementDate ? 'font-bold text-purple-600' : ''}`}>{emp.settlementDate || '-'}</td>
                                     <td className="p-3 text-center whitespace-nowrap no-print">
                                         <div className="flex items-center justify-center gap-1">
                                             <button onClick={() => handleOpenDetailsModal(emp)} className="btn btn-xs btn-ghost text-blue-600" title="ویرایش جزئیات">ویرایش</button>
