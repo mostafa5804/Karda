@@ -8,6 +8,7 @@ import { generateReport } from '../utils/reports';
 import { exportReportToCSV } from '../utils/export';
 import { formatCurrency } from '../utils/currency';
 import { JALALI_MONTHS, ICONS } from '../constants';
+import { getCurrentJalaliDate } from '../utils/calendar';
 import AttendanceSummaryReport from './AttendanceSummaryReport';
 import AttendanceListReport from './AttendanceListReport';
 import IndividualReport from './IndividualReport';
@@ -86,11 +87,12 @@ const Reports: React.FC = () => {
     }, []);
 
     const salaryReportData = useMemo(() => {
-        if (activeEmployees.length === 0) return [];
+        if (activeEmployees.length === 0 || !reportDateFilter.from || !reportDateFilter.to) return [];
         return generateReport(activeEmployees, attendance, settings, financialData, reportDateFilter.from, reportDateFilter.to);
     }, [activeEmployees, attendance, settings, financialData, reportDateFilter]);
     
     const handleExport = () => {
+        if (!reportDateFilter.from || !reportDateFilter.to) return;
         exportReportToCSV(salaryReportData, projects, projectId, reportDateFilter.from, reportDateFilter.to);
     };
 
@@ -108,35 +110,54 @@ const Reports: React.FC = () => {
 
     const handleModeChange = (newMode: 'month' | 'range') => {
         setReportDateFilter(currentFilter => {
-            const newFilter = { ...currentFilter, mode: newMode };
-            if (newMode === 'month') {
-                newFilter.to = newFilter.from;
-            }
-            return newFilter;
+            const [currentYear, currentMonth] = getCurrentJalaliDate();
+            const fallbackDate = { year: currentYear, month: currentMonth };
+            
+            const fromDate = currentFilter.from || fallbackDate;
+            const toDate = (newMode === 'month') ? fromDate : (currentFilter.to || fromDate);
+            
+            return {
+                ...currentFilter,
+                mode: newMode,
+                from: fromDate,
+                to: toDate,
+            };
         });
     };
 
     const handleDateChange = (part: 'from' | 'to', newDate: { year: number, month: number }) => {
         setReportDateFilter(currentFilter => {
-            if (currentFilter.mode === 'month') {
-                return {
-                    mode: 'month',
-                    from: newDate,
-                    to: newDate,
-                };
-            }
+            const [currentYear, currentMonth] = getCurrentJalaliDate();
+            const fallbackDate = { year: currentYear, month: currentMonth };
             
-            const newFilter = { ...currentFilter, [part]: newDate };
+            let fromDate = currentFilter.from || fallbackDate;
+            let toDate = currentFilter.to || fromDate;
 
-            // Ensure 'from' is not after 'to'
-            if (newFilter.from.year > newFilter.to.year || (newFilter.from.year === newFilter.to.year && newFilter.from.month > newFilter.to.month)) {
+            if (currentFilter.mode === 'month') {
+                fromDate = newDate;
+                toDate = newDate;
+            } else {
                 if (part === 'from') {
-                    newFilter.to = newFilter.from;
+                    fromDate = newDate;
                 } else {
-                    newFilter.from = newFilter.to;
+                    toDate = newDate;
                 }
             }
-            return newFilter;
+            
+            // Ensure 'from' is not after 'to'
+            if (fromDate.year > toDate.year || (fromDate.year === toDate.year && fromDate.month > toDate.month)) {
+                if (part === 'from') {
+                    toDate = fromDate;
+                } else {
+                    fromDate = toDate;
+                }
+            }
+            
+            return {
+                ...currentFilter,
+                from: fromDate,
+                to: toDate,
+            };
         });
     };
 
@@ -144,13 +165,14 @@ const Reports: React.FC = () => {
         // "Attendance List" report only supports month mode.
         // If user switches to it while in range mode, auto-switch to month mode.
         if (newView === 'attendanceList' && reportDateFilter.mode === 'range') {
-           setReportDateFilter(f => ({ ...f, mode: 'month', to: f.from }));
+           setReportDateFilter(f => ({ ...f, mode: 'month', to: f.from! }));
         }
         setReportView(newView);
     };
     
     const reportTitle = useMemo(() => {
         const { mode, from, to } = reportDateFilter;
+        if (!from || !to) return '';
         if (mode === 'month' || (from.year === to.year && from.month === to.month)) {
             return `${JALALI_MONTHS[from.month - 1]} ${from.year}`;
         }
@@ -249,23 +271,23 @@ const Reports: React.FC = () => {
                         <a role="tab" className={`tab ${reportDateFilter.mode === 'range' ? 'tab-active' : ''} ${reportView === 'attendanceList' ? 'tab-disabled' : ''}`} onClick={() => { if (reportView !== 'attendanceList') { handleModeChange('range'); } }}>بازه زمانی</a>
                     </div>
                     <div className="p-2 flex items-center gap-4 flex-wrap">
-                        {reportDateFilter.mode === 'month' ? (
+                        {reportDateFilter.mode === 'month' && reportDateFilter.from ? (
                             <DateSelector
                                 date={reportDateFilter.from}
                                 onDateChange={d => handleDateChange('from', d)}
                             />
                         ) : (
                              <>
-                                <DateSelector
+                                {reportDateFilter.from && <DateSelector
                                     label="از:"
                                     date={reportDateFilter.from}
                                     onDateChange={d => handleDateChange('from', d)}
-                                />
-                                 <DateSelector
+                                />}
+                                 {reportDateFilter.to && <DateSelector
                                     label="تا:"
                                     date={reportDateFilter.to}
                                     onDateChange={d => handleDateChange('to', d)}
-                                />
+                                />}
                             </>
                         )}
                     </div>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getCurrentJalaliDate } from '../utils/calendar';
-import { View, ReportView, DashboardDateFilter, ReportDateFilter } from '../types';
+import { View, ReportView, DashboardDateFilter, ReportDateFilter, ReportDateFilterMode } from '../types';
 
 interface AppState {
     view: View;
@@ -89,8 +89,41 @@ export const useAppStore = create(
             setIsFileSystemReady: (isReady) => set({ isFileSystemReady: isReady }),
         }),
         {
-            name: 'app-storage-v2', // version bump to avoid conflicts
+            name: 'app-storage-v2',
             storage: createJSONStorage(() => localStorage),
+            merge: (persisted, current) => {
+                const persistedState = persisted as Partial<AppState> | null;
+
+                if (!persistedState) {
+                    return current;
+                }
+
+                // Validate the critical nested object from the persisted state.
+                const rdf = persistedState.reportDateFilter;
+
+                const isValidRdf =
+                    rdf != null &&
+                    typeof rdf === 'object' &&
+                    typeof rdf.mode === 'string' &&
+                    rdf.from != null &&
+                    typeof rdf.from === 'object' &&
+                    typeof rdf.from.year === 'number' &&
+                    typeof rdf.from.month === 'number' &&
+                    rdf.to != null &&
+                    typeof rdf.to === 'object' &&
+                    typeof rdf.to.year === 'number' &&
+                    typeof rdf.to.month === 'number';
+
+                if (isValidRdf) {
+                    // If the persisted filter is valid, merge the entire persisted state.
+                    return { ...current, ...persistedState };
+                } else {
+                    // If the filter is invalid, merge everything *except* the invalid property.
+                    // This ensures the valid `reportDateFilter` from the initial state is used.
+                    const { reportDateFilter, ...restOfPersisted } = persistedState;
+                    return { ...current, ...restOfPersisted };
+                }
+            },
         }
     )
 );

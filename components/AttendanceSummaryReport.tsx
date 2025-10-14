@@ -21,6 +21,7 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
     const currentProject = projects.find(p => p.id === projectId);
 
     const data = useMemo(() => {
+        if (!reportDateFilter.from || !reportDateFilter.to) return [];
         return generateAttendanceSummary(employees, attendance, settings, reportDateFilter.from, reportDateFilter.to);
     }, [employees, attendance, settings, reportDateFilter]);
 
@@ -38,6 +39,8 @@ const AttendanceSummaryReport: React.FC<AttendanceSummaryReportProps> = ({ emplo
     
     const ReportHeader = () => {
         const { mode, from, to } = reportDateFilter;
+        if (!from || !to) return null;
+
         let dateString;
         if (mode === 'month' || (from.year === to.year && from.month === to.month)) {
             dateString = `ماه: ${JALALI_MONTHS[from.month - 1]} سال: ${from.year}`;

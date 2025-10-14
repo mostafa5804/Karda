@@ -8,7 +8,7 @@ import { useCompanyStore } from '../stores/useCompanyStore';
 import { generateReport } from '../utils/reports';
 import { JALALI_MONTHS, ICONS } from '../constants';
 import { formatCurrency } from '../utils/currency';
-import { getDaysInJalaliMonth, getFormattedDate, getFirstDayOfMonthJalali } from '../utils/calendar';
+import { getDaysInJalaliMonth, getFormattedDate, getFirstDayOfMonthJalali, getCurrentJalaliDate } from '../utils/calendar';
 import IndividualAiAnalysis from './IndividualAiAnalysis';
 import Payslip from './Payslip';
 
@@ -31,12 +31,13 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
     const currentProject = projects.find(p => p.id === projectId);
 
     const reportData = useMemo(() => {
-        if (!employee) return null;
+        if (!employee || !reportDateFilter.from || !reportDateFilter.to) return null;
         return generateReport([employee], attendance, settings, projectFinancials[projectId] || {}, reportDateFilter.from, reportDateFilter.to)[0];
     }, [employee, attendance, settings, projectFinancials, reportDateFilter, projectId]);
     
     const reportTitle = useMemo(() => {
         const { from, to } = reportDateFilter;
+        if (!from || !to) return '';
         if (from.year === to.year && from.month === to.month) {
             return `گزارش ماه ${JALALI_MONTHS[from.month - 1]} ${from.year}`;
         }
@@ -63,7 +64,10 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
         );
     }
     
-    const { year: selectedYear, month: selectedMonth } = reportDateFilter.from;
+    let { year: selectedYear, month: selectedMonth } = reportDateFilter.from || {};
+    if (!selectedYear || !selectedMonth) {
+        [selectedYear, selectedMonth] = getCurrentJalaliDate();
+    }
     const daysInMonth = getDaysInJalaliMonth(selectedYear, selectedMonth);
     const firstDay = getFirstDayOfMonthJalali(selectedYear, selectedMonth);
 

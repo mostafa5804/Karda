@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useAppStore } from '../stores/useAppStore';
 import { useCompanyStore } from '../stores/useCompanyStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
-import { getDaysInJalaliMonth, getFirstDayOfMonthJalali, getFormattedDate } from '../utils/calendar';
+import { getDaysInJalaliMonth, getFirstDayOfMonthJalali, getFormattedDate, getCurrentJalaliDate } from '../utils/calendar';
 import { JALALI_MONTHS, JALALI_DAYS_ABBR, ICONS } from '../constants';
 import { Employee, EmployeeAttendance, Settings, CustomAttendanceCode } from '../types';
 import { getContrastingTextColor } from '../utils/color';
@@ -21,7 +21,10 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
     const [printOrientation, setPrintOrientation] = useState<'portrait' | 'landscape'>('landscape');
     
     // This report is always for a single month, taken from the 'from' part of the filter
-    const { year: selectedYear, month: selectedMonth } = reportDateFilter.from;
+    let { year: selectedYear, month: selectedMonth } = reportDateFilter.from || {};
+    if (!selectedYear || !selectedMonth) {
+        [selectedYear, selectedMonth] = getCurrentJalaliDate();
+    }
 
     const daysInMonth = getDaysInJalaliMonth(selectedYear, selectedMonth);
     const firstDay = getFirstDayOfMonthJalali(selectedYear, selectedMonth);
