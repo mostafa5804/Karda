@@ -23,7 +23,12 @@ const initialSettings: Settings = {
     dayTypeOverrides: {},
     currency: 'Toman',
     salaryMode: 'project',
-    customCodes: [],
+    customCodes: [
+        { id: 'system-gh', char: 'غ', description: 'غیبت (کسر از حقوق)', color: '#FECACA', isSystemCode: true },
+        { id: 'system-m', char: 'م', description: 'مرخصی (با حقوق)', color: '#A7F3D0', isSystemCode: true },
+        { id: 'system-a', char: 'ا', description: 'استعلاجی (با حقوق)', color: '#FDE68A', isSystemCode: true },
+        { id: 'system-t', char: 'ت', description: 'تسویه حساب', color: '#E9D5FF', isSystemCode: true },
+    ],
     isAiAssistantEnabled: false,
     geminiApiKey: '',
 };
@@ -35,7 +40,18 @@ export const useSettingsStore = create(
                 'default': initialSettings,
             },
             getSettings: (projectId) => {
-                return { ...initialSettings, ...(get().projectSettings[projectId] || {}) };
+                const projectSpecificSettings = get().projectSettings[projectId] || {};
+                // Ensure system codes are always present
+                const baseCodes = [...initialSettings.customCodes];
+                const customCodes = projectSpecificSettings.customCodes || [];
+                const codeChars = new Set(customCodes.map(c => c.char));
+                baseCodes.forEach(bc => {
+                    if (!codeChars.has(bc.char)) {
+                        customCodes.push(bc);
+                    }
+                });
+
+                return { ...initialSettings, ...projectSpecificSettings, customCodes };
             },
             updateSettings: (projectId, newSettings) => set((state) => {
                 const currentSettings = state.getSettings(projectId);
@@ -65,7 +81,7 @@ export const useSettingsStore = create(
                 let success = false;
                 set(state => {
                     const settings = state.getSettings(projectId);
-                    const isCharTaken = settings.customCodes.some(c => c.char === code.char);
+                    const isCharTaken = settings.customCodes.some(c => c.char.toLowerCase() === code.char.toLowerCase());
                     if (isCharTaken) {
                         success = false;
                         return state;
@@ -81,9 +97,22 @@ export const useSettingsStore = create(
                  let success = false;
                 set(state => {
                     const settings = state.getSettings(projectId);
+                    const codeToUpdate = settings.customCodes.find(c => c.id === codeId);
+
+                    if (!codeToUpdate) {
+                        success = false;
+                        return state;
+                    }
+
+                    // Prevent changing char for system codes
+                    if (codeToUpdate.isSystemCode && updates.char && updates.char !== codeToUpdate.char) {
+                        success = false; // Or show a toast message
+                        return state;
+                    }
+
                     // Check for char collision if char is being updated
                     if (updates.char) {
-                        const isCharTaken = settings.customCodes.some(c => c.id !== codeId && c.char === updates.char);
+                        const isCharTaken = settings.customCodes.some(c => c.id !== codeId && c.char.toLowerCase() === updates.char!.toLowerCase());
                         if (isCharTaken) {
                             success = false;
                             return state;
@@ -99,6 +128,10 @@ export const useSettingsStore = create(
             },
             removeCustomCode: (projectId, codeId) => set(state => {
                 const settings = state.getSettings(projectId);
+                const codeToRemove = settings.customCodes.find(c => c.id === codeId);
+                if (codeToRemove?.isSystemCode) {
+                    return state; // Cannot remove system codes
+                }
                 const updatedCodes = settings.customCodes.filter(c => c.id !== codeId);
                 const updatedSettings = { ...settings, customCodes: updatedCodes };
                 return { projectSettings: { ...state.projectSettings, [projectId]: updatedSettings } };

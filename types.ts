@@ -36,6 +36,7 @@ export interface CustomAttendanceCode {
     char: string;
     description: string;
     color: string;
+    isSystemCode?: boolean; // To identify and protect system codes
 }
 
 export interface Settings {
@@ -156,13 +157,13 @@ export interface SortConfig<T> {
 }
 
 export interface Document {
-    id: string; // Unique ID for the document
+    id: string; // Unique ID for the document metadata
     projectId: string;
     employeeId: string;
     fileName: string;
     fileType: string;
     fileSize: number;
-    data: string; // Base64 encoded file data
+    filePath: string; // Relative path to the file in the user-selected directory
     uploadedAt: string; // ISO string date
 }
 

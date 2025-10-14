@@ -6,9 +6,10 @@ import { useFinancialStore } from '../stores/useFinancialStore';
 import { useAppStore } from '../stores/useAppStore';
 import { useToastStore } from '../stores/useToastStore';
 import ConfirmationModal from './ConfirmationModal';
-import { Settings, CustomAttendanceCode } from '../types';
+import { Settings, CustomAttendanceCode, Document } from '../types';
 import { useNotesStore } from '../stores/useNotesStore';
 import { useDocumentStore } from '../stores/useDocumentStore';
+import { fileSystemManager } from '../utils/db';
 
 const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     const { getSettings, addCustomCode, updateCustomCode, removeCustomCode } = useSettingsStore();
@@ -33,15 +34,23 @@ const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     
     return (
         <>
-            <h3 className="font-semibold text-gray-700 mb-2">کدهای سفارشی شما</h3>
-             <p className="text-sm text-gray-600 mb-4">کدهای تک-حرفی برای ثبت وضعیت‌های خاص (مثل نیم-روز، دورکاری و...) تعریف کنید. این کدها در جدول حضور و غیاب با رنگ و توضیحات مشخص‌شده نمایش داده می‌شوند.</p>
+            <h3 className="font-semibold text-gray-700 mb-2">کدهای کارکرد</h3>
+             <p className="text-sm text-gray-600 mb-4">
+                کدهای تک-حرفی برای ثبت وضعیت‌های مختلف تعریف کنید. کدهای سیستمی (مانند غیبت و مرخصی) قابل حذف نیستند اما می‌توانید رنگ و توضیحات آن‌ها را ویرایش کنید.
+             </p>
             <div className="space-y-2 mb-4">
-                {settings.customCodes.map(code => (
+                {settings.customCodes.sort((a,b) => (a.isSystemCode ? -1 : 1) - (b.isSystemCode ? -1 : 1)).map(code => (
                     <div key={code.id} className="grid grid-cols-12 gap-2 items-center">
-                        <input type="text" value={code.char} maxLength={1} onChange={e => updateCustomCode(projectId, code.id, { char: e.target.value })} className="input input-bordered input-sm col-span-1 text-center font-bold" style={{backgroundColor: code.color}} />
+                        <input type="text" value={code.char} maxLength={1} onChange={e => updateCustomCode(projectId, code.id, { char: e.target.value })} className="input input-bordered input-sm col-span-1 text-center font-bold" style={{backgroundColor: code.color}} disabled={code.isSystemCode} />
                         <input type="text" value={code.description} onChange={e => updateCustomCode(projectId, code.id, { description: e.target.value })} className="input input-bordered input-sm col-span-6" />
                         <input type="color" value={code.color} onChange={e => updateCustomCode(projectId, code.id, { color: e.target.value })} className="input input-sm p-1 col-span-2" />
-                        <button onClick={() => removeCustomCode(projectId, code.id)} className="btn btn-sm btn-ghost text-red-500 col-span-3">حذف</button>
+                        <div className="col-span-3">
+                        {!code.isSystemCode ? (
+                            <button onClick={() => removeCustomCode(projectId, code.id)} className="btn btn-sm btn-ghost text-red-500">حذف</button>
+                        ) : (
+                            <span className="text-xs text-gray-400 p-2">سیستمی</span>
+                        )}
+                        </div>
                     </div>
                 ))}
             </div>
@@ -56,8 +65,13 @@ const CustomCodeEditor: React.FC<{ projectId: string }> = ({ projectId }) => {
     );
 }
 
+// FIX: Define the props interface for the component.
+interface SettingsPageProps {
+    onFsReady: () => void;
+}
 
-const SettingsPage: React.FC = () => {
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ onFsReady }) => {
     const { projects, addProject, updateProject, removeProject } = useCompanyStore();
     const { currentProjectId, setCurrentProjectId } = useAppStore();
     const addToast = useToastStore(state => state.addToast);
@@ -84,10 +98,15 @@ const SettingsPage: React.FC = () => {
     const [editingProject, setEditingProject] = useState<{ id: string, name: string } | null>(null);
 
     const [projectToRemove, setProjectToRemove] = useState<{ id: string; name: string } | null>(null);
-    const [restoreFile, setRestoreFile] = useState<File | null>(null);
-    const restoreFileInputRef = useRef<HTMLInputElement>(null);
-    const [backupOptions, setBackupOptions] = useState({ scope: 'all', includeDocs: false });
+    const [isRestoring, setIsRestoring] = useState(false);
+    
+    const [isFsSupported, setIsFsSupported] = useState(true);
+    const [isFsHandleSet, setIsFsHandleSet] = useState(false);
 
+    useEffect(() => {
+        setIsFsSupported(fileSystemManager.isSupported());
+        setIsFsHandleSet(fileSystemManager.hasHandle());
+    }, []);
 
     useEffect(() => {
         const project = projects.find(p => p.id === projectId);
@@ -101,6 +120,17 @@ const SettingsPage: React.FC = () => {
         setIsAiAssistantEnabled(settings.isAiAssistantEnabled);
         setGeminiApiKey(settings.geminiApiKey);
     }, [projectId, projects, getSettings]);
+
+    const handleRequestDir = async () => {
+        const success = await fileSystemManager.requestDirectoryPermission();
+        if (success) {
+            setIsFsHandleSet(true);
+            onFsReady();
+            addToast("پوشه با موفقیت انتخاب شد و دسترسی لازم تایید گردید.", 'success');
+        } else {
+            addToast("عملیات انتخاب پوشه لغو شد یا با خطا مواجه گردید.", 'warning');
+        }
+    };
     
     const handleSaveProjectDetails = () => {
         if (!currentProject) return;
@@ -169,103 +199,112 @@ const SettingsPage: React.FC = () => {
 
     const { getStateForBackup: getCompanyState, restoreState: restoreCompanyState } = useCompanyStore();
 
-
     const handleBackup = async () => {
-        const projectIdsToBackup = backupOptions.scope === 'all' ? projects.map(p => p.id) : [projectId];
-        const projectName = backupOptions.scope === 'all' ? 'all-projects' : (currentProject?.name || 'project');
-        const companyState = getCompanyState();
-        const projectsToBackup = companyState.projects.filter(p => projectIdsToBackup.includes(p.id));
-        const employeeState = getEmployeeState();
-        const employeeDataToBackup = Object.entries(employeeState.projectData)
-            .filter(([id]) => projectIdsToBackup.includes(id))
-            .reduce((obj, [id, data]) => ({ ...obj, [id]: data }), {});
-        const settingsState = getSettingsState();
-        const settingsToBackup = Object.entries(settingsState.projectSettings)
-            .filter(([id]) => projectIdsToBackup.includes(id))
-            .reduce((obj, [id, data]) => ({ ...obj, [id]: data }), {});
-        const financialState = getFinancialState();
-        const financialsToBackup = Object.entries(financialState.projectFinancials)
-            .filter(([id]) => projectIdsToBackup.includes(id))
-            .reduce((obj, [id, data]) => ({ ...obj, [id]: data }), {});
-        const notesState = getNotesState();
-        const notesToBackup = Object.entries(notesState.projectNotes)
-            .filter(([id]) => projectIdsToBackup.includes(id))
-            .reduce((obj, [id, data]) => ({ ...obj, [id]: data }), {});
-        let documentsToBackup = [];
-        if (backupOptions.includeDocs) {
-            const allDocs = await getAllDocuments();
-            documentsToBackup = allDocs.filter(doc => projectIdsToBackup.includes(doc.projectId));
+        try {
+            const companyState = getCompanyState();
+            const employeeState = getEmployeeState();
+            const settingsState = getSettingsState();
+            const financialState = getFinancialState();
+            const notesState = getNotesState();
+            const documents = getAllDocuments();
+
+            const backupData = {
+                projects: companyState.projects,
+                employees: employeeState,
+                settings: settingsState,
+                financials: financialState,
+                notes: notesState,
+                documents: documents,
+                backupVersion: '3.0.0',
+                backupDate: new Date().toISOString(),
+            };
+
+            const fileName = `karda-backup-${new Date().toLocaleDateString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}.json`;
+            await fileSystemManager.writeFile(`backups/${fileName}`, JSON.stringify(backupData, null, 2));
+            addToast(`فایل پشتیبان با نام "${fileName}" در پوشه backups ذخیره شد.`, 'success');
+
+        } catch (error) {
+            console.error("Backup failed:", error);
+            addToast("عملیات پشتیبان‌گیری با خطا مواجه شد.", "error");
         }
-
-        const backupData = {
-            projects: projectsToBackup,
-            employees: { projectData: employeeDataToBackup },
-            settings: { projectSettings: settingsToBackup },
-            financials: { projectFinancials: financialsToBackup },
-            notes: { projectNotes: notesToBackup },
-            documents: documentsToBackup,
-            backupVersion: '2.4.0',
-            backupDate: new Date().toISOString(),
-        };
-
-        const dataStr = JSON.stringify(backupData, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        const fileName = `karda-backup-${projectName}-${new Date().toLocaleDateString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}.json`;
-        linkElement.setAttribute('download', fileName);
-        document.body.appendChild(linkElement);
-        linkElement.click();
-        document.body.removeChild(linkElement);
     };
+    
+    const handleRestoreRequest = async () => {
+        try {
+            // FIX: The 'showOpenFilePicker' method is not part of the standard Window type. Cast to 'any' to access it.
+            const [fileHandle] = await (window as any).showOpenFilePicker({
+                types: [{ description: 'Karda Backup Files', accept: { 'application/json': ['.json'] } }],
+            });
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            const backupData = JSON.parse(text);
 
-    const handleRestoreRequest = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        setRestoreFile(file);
-    };
-
-    const confirmRestore = () => {
-        if (!restoreFile) return;
-
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const text = e.target?.result;
-                if (typeof text !== 'string') throw new Error('File content is not valid');
-                const backupData = JSON.parse(text);
-
-                if (!backupData.employees || !backupData.settings || !backupData.projects || !backupData.financials) {
-                    throw new Error('فایل پشتیبان معتبر نیست. برخی از بخش‌های اصلی اطلاعات یافت نشد.');
-                }
-                
-                restoreCompanyState({ projects: backupData.projects });
-                restoreEmployeeState(backupData.employees);
-                restoreSettingsState(backupData.settings);
-                restoreFinancialState(backupData.financials);
-                if (backupData.notes) {
-                    restoreNotesState(backupData.notes);
-                }
-                if (backupData.documents && Array.isArray(backupData.documents)) {
-                    await clearAndRestoreDocuments(backupData.documents);
-                }
-
-                addToast('اطلاعات با موفقیت بازیابی شد. صفحه مجددا بارگذاری می‌شود.', 'success');
-                setTimeout(() => window.location.reload(), 2000);
-            } catch (error) {
-                console.error('Error restoring data:', error);
-                addToast(`خطا در بازیابی اطلاعات: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-            } finally {
-                if (restoreFileInputRef.current) restoreFileInputRef.current.value = '';
-                setRestoreFile(null);
+             if (!backupData.employees || !backupData.settings || !backupData.projects) {
+                throw new Error('فایل پشتیبان معتبر نیست.');
             }
-        };
-        reader.readAsText(restoreFile);
+            
+            // Show confirmation modal
+            setIsRestoring(true);
+            // Store data temporarily for confirmation
+            (window as any)._restoreData = backupData;
+
+        } catch (err) {
+            console.error("Error selecting restore file:", err);
+            addToast('فایلی برای بازیابی انتخاب نشد.', 'info');
+        }
     };
+
+    const confirmRestore = async () => {
+        const backupData = (window as any)._restoreData;
+        if (!backupData) return;
+
+        try {
+            restoreCompanyState({ projects: backupData.projects });
+            restoreEmployeeState(backupData.employees);
+            restoreSettingsState(backupData.settings);
+            restoreFinancialState(backupData.financials || { projectFinancials: {} });
+            restoreNotesState(backupData.notes || { projectNotes: {} });
+            
+            // Document restore only restores metadata. User must ensure files exist.
+            await clearAndRestoreDocuments(backupData.documents || []);
+
+            addToast('اطلاعات با موفقیت بازیابی شد. صفحه مجددا بارگذاری می‌شود.', 'success');
+            setTimeout(() => window.location.reload(), 2000);
+        } catch(error) {
+            console.error("Restore failed:", error);
+            addToast(`بازیابی اطلاعات با خطا مواجه شد: ${error instanceof Error ? error.message : ''}`, "error");
+        } finally {
+            setIsRestoring(false);
+            delete (window as any)._restoreData;
+        }
+    };
+
 
     return (
         <div className="space-y-4 max-w-4xl mx-auto">
+             <details className="collapse collapse-arrow bg-base-100 shadow-sm" open>
+                <summary className="collapse-title text-xl font-bold">مدیریت ذخیره‌سازی</summary>
+                <div className="collapse-content">
+                     {!isFsSupported ? (
+                        <div className="alert alert-error">مرورگر شما از قابلیت ذخیره‌سازی مستقیم پشتیبانی نمی‌کند. لطفاً از آخرین نسخه کروم، اج یا اپرا استفاده کنید.</div>
+                     ) : (
+                        <div className="p-4 bg-base-200 rounded-lg flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold">پوشه ذخیره‌سازی داده‌ها</h3>
+                                {isFsHandleSet ? (
+                                    <p className="text-sm text-green-600">پوشه با موفقیت انتخاب شده و دسترسی لازم برقرار است.</p>
+                                ) : (
+                                    <p className="text-sm text-yellow-600">هنوز هیچ پوشه‌ای انتخاب نشده است. برای استفاده از برنامه، انتخاب پوشه الزامی است.</p>
+                                )}
+                            </div>
+                            <button className="btn btn-primary" onClick={handleRequestDir}>
+                                {isFsHandleSet ? 'تغییر پوشه' : 'انتخاب پوشه'}
+                            </button>
+                        </div>
+                     )}
+                </div>
+            </details>
+
             <details className="collapse collapse-arrow bg-base-100 shadow-sm" open>
                 <summary className="collapse-title text-xl font-bold">مدیریت پروژه‌ها</summary>
                 <div className="collapse-content">
@@ -298,7 +337,7 @@ const SettingsPage: React.FC = () => {
 
             {currentProject && (
             <>
-            <details className="collapse collapse-arrow bg-base-100 shadow-sm" open>
+            <details className="collapse collapse-arrow bg-base-100 shadow-sm">
                 <summary className="collapse-title text-xl font-bold">اطلاعات و تنظیمات پروژه: "{currentProject.name}"</summary>
                 <div className="collapse-content">
                     <div className="space-y-4 pt-2">
@@ -380,53 +419,22 @@ const SettingsPage: React.FC = () => {
 
             <details className="collapse collapse-arrow bg-base-100 shadow-sm">
                 <summary className="collapse-title text-xl font-bold">مدیریت کدهای اختصاری</summary>
-                <div className="collapse-content">
-                    <div className="pt-2">
-                        <h3 className="font-semibold mb-2">کدهای پیش‌فرض سیستم</h3>
-                        <p className="text-sm text-base-content/70 mb-4">این کدها در محاسبات اصلی سیستم استفاده می‌شوند و کاراکتر آن‌ها قابل تغییر نیست.</p>
-                        <ul className="list-disc list-inside space-y-2 bg-base-200 p-4 rounded-md">
-                            <li><code className="bg-base-300 px-2 py-1 rounded-md font-mono text-base">ا</code> : استعلاجی (جزو روزهای موثر حقوق)</li>
-                            <li><code className="bg-base-300 px-2 py-1 rounded-md font-mono text-base">م</code> : مرخصی (جزو روزهای موثر حقوق)</li>
-                            <li><code className="bg-base-300 px-2 py-1 rounded-md font-mono text-base">غ</code> : غیبت (کسر از حقوق)</li>
-                            <li><code className="bg-base-300 px-2 py-1 rounded-md font-mono text-base">ت</code> : تسویه حساب (فقط جهت نمایش)</li>
-                        </ul>
-                        <div className="divider my-6"></div>
-                        <CustomCodeEditor projectId={projectId} />
-                    </div>
+                <div className="collapse-content pt-2">
+                    <CustomCodeEditor projectId={projectId} />
                 </div>
             </details>
             </>
             )}
 
             <details className="collapse collapse-arrow bg-base-100 shadow-sm">
-                <summary className="collapse-title text-xl font-bold">پشتیبان‌گیری و بازیابی اطلاعات</summary>
+                <summary className="collapse-title text-xl font-bold">پشتیبان‌گیری و بازیابی</summary>
                 <div className="collapse-content">
-                    <div className="space-y-4 pt-2">
-                        <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <input type="radio" name="backupScope" className="radio" value="all" checked={backupOptions.scope === 'all'} onChange={(e) => setBackupOptions(prev => ({...prev, scope: e.target.value}))} />
-                                <span className="label-text">پشتیبان‌گیری از <span className='font-bold'>تمام پروژه‌ها</span></span>
-                            </label>
-                        </div>
-                        {projects.length > 1 && <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <input type="radio" name="backupScope" className="radio" value="current" checked={backupOptions.scope === 'current'} onChange={(e) => setBackupOptions(prev => ({...prev, scope: e.target.value}))} />
-                                <span className="label-text">پشتیبان‌گیری فقط از پروژه <span className='font-bold'>"{currentProject?.name}"</span></span>
-                            </label>
-                        </div>}
-                        <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <input type="checkbox" className="checkbox" checked={backupOptions.includeDocs} onChange={(e) => setBackupOptions(prev => ({...prev, includeDocs: e.target.checked}))} />
-                                <span className="label-text font-semibold">شامل کردن مدارک آپلود شده (فایل نهایی ممکن است حجیم شود)</span>
-                            </label>
-                        </div>
-                    </div>
+                    <p className="text-sm text-base-content/70 mb-4">
+                        فایل‌های پشتیبان در زیرپوشه‌ای به نام `backups` در پوشه اصلی برنامه شما ذخیره می‌شوند. برای بازیابی، فایل مورد نظر را از سیستم خود انتخاب کنید.
+                    </p>
                     <div className="flex items-center space-x-4 space-x-reverse mt-6 pt-4 border-t border-base-300">
-                        <button onClick={handleBackup} className="btn btn-success">دانلود فایل پشتیبان</button>
-                        <label className="btn btn-warning">
-                            <span>بازیابی از فایل</span>
-                            <input ref={restoreFileInputRef} type="file" accept=".json" className="hidden" onChange={handleRestoreRequest} />
-                        </label>
+                        <button onClick={handleBackup} className="btn btn-success" disabled={!isFsHandleSet}>ایجاد فایل پشتیبان</button>
+                        <button onClick={handleRestoreRequest} className="btn btn-warning" disabled={!isFsHandleSet}>بازیابی از فایل</button>
                     </div>
                 </div>
             </details>
@@ -443,17 +451,14 @@ const SettingsPage: React.FC = () => {
             </ConfirmationModal>
 
             <ConfirmationModal
-                isOpen={!!restoreFile}
-                onClose={() => {
-                    setRestoreFile(null);
-                    if (restoreFileInputRef.current) restoreFileInputRef.current.value = '';
-                }}
+                isOpen={isRestoring}
+                onClose={() => setIsRestoring(false)}
                 onConfirm={confirmRestore}
                 title="تایید بازیابی اطلاعات"
                 confirmText="بازیابی کن"
                 confirmClassName="btn-warning"
             >
-                <p>آیا مطمئن هستید؟ تمام اطلاعات فعلی با اطلاعات فایل پشتیبان <strong className="px-1">({restoreFile?.name})</strong> جایگزین خواهد شد.</p>
+                <p>آیا مطمئن هستید؟ تمام اطلاعات فعلی برنامه با اطلاعات فایل پشتیبان جایگزین خواهد شد.</p>
             </ConfirmationModal>
         </div>
     );

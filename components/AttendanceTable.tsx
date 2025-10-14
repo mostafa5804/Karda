@@ -11,12 +11,14 @@ import ExcelActions from './ExcelActions';
 import NoteEditorModal from './NoteEditorModal';
 import { getContrastingTextColor } from '../utils/color';
 import ManageActiveEmployeesModal from './ManageActiveEmployeesModal';
+import { useToastStore } from '../stores/useToastStore';
 
 const AttendanceTable: React.FC = () => {
     const { selectedYear, selectedMonth, currentProjectId } = useAppStore();
     const { getProjectData, setAttendance } = useEmployeeStore();
     const { getSettings, setDayOverride } = useSettingsStore();
     const { getNote, addOrUpdateNote } = useNotesStore();
+    const addToast = useToastStore(s => s.addToast);
 
     const projectId = currentProjectId || 'default';
     const { employees, attendance } = getProjectData(projectId);
@@ -38,6 +40,8 @@ const AttendanceTable: React.FC = () => {
         return map;
     }, [settings.customCodes]);
     
+    const validCodeChars = useMemo(() => new Set(settings.customCodes.map(c => c.char.toLowerCase())), [settings.customCodes]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (headerMenuRef.current && !headerMenuRef.current.contains(event.target as Node)) {
@@ -51,7 +55,21 @@ const AttendanceTable: React.FC = () => {
     }, [headerMenuRef]);
 
     const handleAttendanceChange = (employeeId: string, date: string, value: string) => {
-        setAttendance(projectId, employeeId, date, value);
+        const trimmedValue = value.trim();
+        if (trimmedValue === '') {
+            setAttendance(projectId, employeeId, date, '');
+            return;
+        }
+
+        const numericValue = parseFloat(trimmedValue);
+        const isValidNumber = !isNaN(numericValue) && numericValue >= 1 && numericValue <= 23;
+        const isValidCode = validCodeChars.has(trimmedValue.toLowerCase());
+
+        if (isValidNumber || isValidCode) {
+            setAttendance(projectId, employeeId, date, trimmedValue);
+        } else {
+            addToast(`مقدار وارد شده نامعتبر است. فقط اعداد بین ۱ تا ۲۳ یا کدهای تعریف شده مجاز هستند.`, 'warning');
+        }
     };
     
     const handleDayHeaderClick = (e: React.MouseEvent, day: number) => {
@@ -126,8 +144,9 @@ const AttendanceTable: React.FC = () => {
                         <td key={date} className="p-0 border border-gray-300 relative group" style={getDayCellStyle(value)}>
                             <input
                                 type="text"
-                                value={value}
-                                onChange={(e) => handleAttendanceChange(employee.id, date, e.target.value)}
+                                defaultValue={value}
+                                onBlur={(e) => handleAttendanceChange(employee.id, date, e.target.value)}
+                                onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                                 className="w-full h-full p-2 text-center bg-transparent outline-none focus:ring-2 focus:ring-blue-500"
                             />
                             {note && <div className="absolute top-0.5 right-0.5 w-2 h-2 bg-blue-500 rounded-full" title={note}></div>}

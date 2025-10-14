@@ -38,7 +38,8 @@ const IndividualAiAnalysis: React.FC<IndividualAiAnalysisProps> = ({ employee, p
         try {
             const ai = new GoogleGenAI({ apiKey: settings.geminiApiKey });
             
-            const summaryData = generateAttendanceSummary([employee], attendance, settings, selectedYear, selectedMonth)[0];
+            // FIX: Pass 'from' and 'to' objects to generateAttendanceSummary as required by its signature.
+            const summaryData = generateAttendanceSummary([employee], attendance, settings, { year: selectedYear, month: selectedMonth }, { year: selectedYear, month: selectedMonth })[0];
              if (!summaryData) {
                 setAnalysis("داده‌ای برای تحلیل این کارمند در ماه انتخاب شده وجود ندارد.");
                 setIsLoading(false);

@@ -15,55 +15,30 @@ const ICONS = {
 
 // Sub-component for managing documents
 const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ employee, projectId }) => {
-    const { addDocument, getDocumentsForEmployee, deleteDocument } = useDocumentStore();
-    const [documents, setDocuments] = useState<Document[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { addDocument, getDocumentsForEmployee, deleteDocument, getDownloadableFile } = useDocumentStore();
+    const documents = getDocumentsForEmployee(projectId, employee.id).sort((a,b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
     const [isUploading, setIsUploading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const addToast = useToastStore(state => state.addToast);
 
-    const fetchDocuments = async () => {
-        setIsLoading(true);
-        try {
-            const docs = await getDocumentsForEmployee(projectId, employee.id);
-            setDocuments(docs.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()));
-        } catch (error) {
-            console.error("Failed to fetch documents:", error);
-            addToast("خطا در بارگذاری لیست مدارک", "error");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (employee) {
-            fetchDocuments();
-        }
-    }, [projectId, employee?.id]);
-    
     const handleFileUpload = async (file: File | null | undefined) => {
         if (!file) return;
 
         setIsUploading(true);
         try {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async () => {
-                const base64Data = reader.result as string;
-                await addDocument({
-                    projectId,
-                    employeeId: employee.id,
-                    fileName: file.name,
-                    fileType: file.type,
-                    fileSize: file.size,
-                    data: base64Data,
-                });
+            const success = await addDocument({
+                projectId,
+                employeeId: employee.id,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+            }, file);
+            
+            if (success) {
                 addToast(`فایل "${file.name}" با موفقیت بارگذاری شد.`, 'success');
-                await fetchDocuments(); // Refresh the list
-            };
-            reader.onerror = () => {
-                throw new Error("خطا در خواندن فایل");
+            } else {
+                 throw new Error("Failed to save file to disk.");
             }
         } catch (error) {
             console.error("Upload failed:", error);
@@ -82,9 +57,8 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
     const handleDelete = async (doc: Document) => {
         if (window.confirm(`آیا از حذف فایل "${doc.fileName}" اطمینان دارید؟`)) {
             try {
-                await deleteDocument(doc.id);
+                await deleteDocument(doc);
                 addToast(`فایل "${doc.fileName}" حذف شد.`, 'success');
-                await fetchDocuments();
             } catch (error) {
                 console.error("Delete failed:", error);
                 addToast("حذف فایل با خطا مواجه شد.", "error");
@@ -92,13 +66,20 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
         }
     };
 
-    const handleDownload = (doc: Document) => {
-        const link = document.createElement('a');
-        link.href = doc.data;
-        link.download = doc.fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleDownload = async (doc: Document) => {
+        const file = await getDownloadableFile(doc);
+        if (file) {
+            const url = URL.createObjectURL(file);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = doc.fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } else {
+            addToast("فایل یافت نشد یا دسترسی به آن ممکن نیست.", "error");
+        }
     };
 
     const formatBytes = (bytes: number, decimals = 2) => {
@@ -129,7 +110,7 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileSelect} multiple={false}/>
                 <div className="flex flex-col items-center justify-center pointer-events-none">
                     {ICONS.upload}
                     <p className="mt-2 text-sm text-gray-600">
@@ -143,14 +124,12 @@ const DocumentManager: React.FC<{ employee: Employee; projectId: string }> = ({ 
             </div>
             
             <div className="divider my-0">مدارک بارگذاری شده</div>
-
-            {isLoading && <div className="text-center p-4"><span className="loading loading-dots loading-lg"></span></div>}
             
-            {!isLoading && documents.length === 0 && (
+            {documents.length === 0 && (
                 <div className="text-center text-gray-500 p-4">هیچ مدرکی برای این کارمند بارگذاری نشده است.</div>
             )}
             
-            {!isLoading && documents.length > 0 && (
+            {documents.length > 0 && (
                 <ul className="space-y-2 max-h-64 overflow-y-auto">
                     {documents.map(doc => (
                         <li key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100">
