@@ -11,7 +11,7 @@ import { JALALI_MONTHS, ICONS } from '../constants';
 import AttendanceSummaryReport from './AttendanceSummaryReport';
 import AttendanceListReport from './AttendanceListReport';
 import IndividualReport from './IndividualReport';
-import { ReportDateFilter } from '../types';
+import { ReportDateFilter, ReportView } from '../types';
 
 const currentJalaliYear = new Date().toLocaleDateString('fa-IR-u-nu-latn').split('/')[0];
 const years = Array.from({ length: 10 }, (_, i) => parseInt(currentJalaliYear) - i);
@@ -47,7 +47,6 @@ const Reports: React.FC = () => {
         selectedEmployeeIdForReport, setSelectedEmployeeIdForReport, 
         setView, 
         reportDateFilter, setReportDateFilter,
-        setSelectedDate
     } = useAppStore();
     
     const { getProjectData } = useEmployeeStore();
@@ -67,7 +66,6 @@ const Reports: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
-    const [localFilter, setLocalFilter] = useState<ReportDateFilter>(reportDateFilter);
 
     const filteredEmployees = useMemo(() => {
         if (!searchQuery) return [];
@@ -108,17 +106,47 @@ const Reports: React.FC = () => {
         return activeEmployees.find(emp => emp.id === selectedEmployeeIdForReport);
     }, [activeEmployees, selectedEmployeeIdForReport]);
 
-    const handleApplyFilter = () => {
-        if (localFilter.mode === 'month') {
-             setReportDateFilter({ ...localFilter, to: localFilter.from });
-        } else {
-            // Ensure from is before to
-            if (localFilter.from.year > localFilter.to.year || (localFilter.from.year === localFilter.to.year && localFilter.from.month > localFilter.to.month)) {
-                setReportDateFilter({ ...localFilter, to: localFilter.from, from: localFilter.to });
-            } else {
-                 setReportDateFilter(localFilter);
+    const handleModeChange = (newMode: 'month' | 'range') => {
+        setReportDateFilter(currentFilter => {
+            const newFilter = { ...currentFilter, mode: newMode };
+            if (newMode === 'month') {
+                newFilter.to = newFilter.from;
             }
+            return newFilter;
+        });
+    };
+
+    const handleDateChange = (part: 'from' | 'to', newDate: { year: number, month: number }) => {
+        setReportDateFilter(currentFilter => {
+            if (currentFilter.mode === 'month') {
+                return {
+                    mode: 'month',
+                    from: newDate,
+                    to: newDate,
+                };
+            }
+            
+            const newFilter = { ...currentFilter, [part]: newDate };
+
+            // Ensure 'from' is not after 'to'
+            if (newFilter.from.year > newFilter.to.year || (newFilter.from.year === newFilter.to.year && newFilter.from.month > newFilter.to.month)) {
+                if (part === 'from') {
+                    newFilter.to = newFilter.from;
+                } else {
+                    newFilter.from = newFilter.to;
+                }
+            }
+            return newFilter;
+        });
+    };
+
+    const handleReportViewChange = (newView: ReportView) => {
+        // "Attendance List" report only supports month mode.
+        // If user switches to it while in range mode, auto-switch to month mode.
+        if (newView === 'attendanceList' && reportDateFilter.mode === 'range') {
+           setReportDateFilter(f => ({ ...f, mode: 'month', to: f.from }));
         }
+        setReportView(newView);
     };
     
     const reportTitle = useMemo(() => {
@@ -209,44 +237,37 @@ const Reports: React.FC = () => {
         <div className="space-y-6">
             <div className="bg-white p-4 rounded-lg shadow no-print space-y-4">
                  <div role="tablist" className="tabs tabs-boxed">
-                    <a role="tab" className={`tab ${reportView === 'salary' ? 'tab-active' : ''}`} onClick={() => setReportView('salary')}>مبلغ حقوق</a> 
-                    <a role="tab" className={`tab ${reportView === 'attendanceSummary' ? 'tab-active' : ''}`} onClick={() => setReportView('attendanceSummary')}>کارکرد کلی</a>
-                    <a role="tab" className={`tab ${reportView === 'attendanceList' ? 'tab-active' : ''}`} onClick={() => {
-                        setReportView('attendanceList');
-                        // If in range mode, switch to month mode to make this report usable
-                        if (localFilter.mode === 'range') {
-                             setLocalFilter(f => ({...f, mode: 'month'}));
-                        }
-                    }}>لیست کارکرد</a>
-                    <a role="tab" className={`tab ${reportView === 'individual' ? 'tab-active' : ''}`} onClick={() => setReportView('individual')}>گزارش فردی</a>
+                    <a role="tab" className={`tab ${reportView === 'salary' ? 'tab-active' : ''}`} onClick={() => handleReportViewChange('salary')}>مبلغ حقوق</a> 
+                    <a role="tab" className={`tab ${reportView === 'attendanceSummary' ? 'tab-active' : ''}`} onClick={() => handleReportViewChange('attendanceSummary')}>کارکرد کلی</a>
+                    <a role="tab" className={`tab ${reportView === 'attendanceList' ? 'tab-active' : ''}`} onClick={() => handleReportViewChange('attendanceList')}>لیست کارکرد</a>
+                    <a role="tab" className={`tab ${reportView === 'individual' ? 'tab-active' : ''}`} onClick={() => handleReportViewChange('individual')}>گزارش فردی</a>
                 </div>
                 
                  <div className="border-t pt-4">
                     <div role="tablist" className="tabs tabs-sm tabs-bordered">
-                        <a role="tab" className={`tab ${localFilter.mode === 'month' ? 'tab-active' : ''}`} onClick={() => setLocalFilter(f => ({...f, mode: 'month'}))}>ماهانه</a>
-                        <a role="tab" className={`tab ${localFilter.mode === 'range' ? 'tab-active' : ''}`} onClick={() => setLocalFilter(f => ({...f, mode: 'range'}))}>بازه زمانی</a>
+                        <a role="tab" className={`tab ${reportDateFilter.mode === 'month' ? 'tab-active' : ''}`} onClick={() => handleModeChange('month')}>ماهانه</a>
+                        <a role="tab" className={`tab ${reportDateFilter.mode === 'range' ? 'tab-active' : ''} ${reportView === 'attendanceList' ? 'tab-disabled' : ''}`} onClick={() => { if (reportView !== 'attendanceList') { handleModeChange('range'); } }}>بازه زمانی</a>
                     </div>
                     <div className="p-2 flex items-center gap-4 flex-wrap">
-                        {localFilter.mode === 'month' ? (
+                        {reportDateFilter.mode === 'month' ? (
                             <DateSelector
-                                date={localFilter.from}
-                                onDateChange={d => setLocalFilter(f => ({...f, from: d}))}
+                                date={reportDateFilter.from}
+                                onDateChange={d => handleDateChange('from', d)}
                             />
                         ) : (
                              <>
                                 <DateSelector
                                     label="از:"
-                                    date={localFilter.from}
-                                    onDateChange={d => setLocalFilter(f => ({...f, from: d}))}
+                                    date={reportDateFilter.from}
+                                    onDateChange={d => handleDateChange('from', d)}
                                 />
                                  <DateSelector
                                     label="تا:"
-                                    date={localFilter.to}
-                                    onDateChange={d => setLocalFilter(f => ({...f, to: d}))}
+                                    date={reportDateFilter.to}
+                                    onDateChange={d => handleDateChange('to', d)}
                                 />
                             </>
                         )}
-                        <button className="btn btn-sm btn-primary" onClick={handleApplyFilter}>اعمال فیلتر</button>
                     </div>
                  </div>
 
