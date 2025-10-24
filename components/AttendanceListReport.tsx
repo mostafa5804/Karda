@@ -116,13 +116,17 @@ const AttendanceListReport: React.FC<AttendanceListReportProps> = ({ employees, 
              <tbody>
                 {employees.map((employee, index) => {
                     const employeeAttendance = attendance[employee.id] || {};
+                    const monthPrefix = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
                     let hasSettlement = false;
-                    const totalHours = Object.values(employeeAttendance).reduce((sum: number, value) => {
-                        const strValue = String(value);
-                        if (strValue.toLowerCase() === 'ت') hasSettlement = true;
-                        const hours = parseFloat(strValue);
-                        return sum + (isNaN(hours) ? 0 : hours);
-                    }, 0);
+
+                    const totalHours = Object.entries(employeeAttendance)
+                        .filter(([date]) => date.startsWith(monthPrefix)) // Filter for the current month only
+                        .reduce((sum: number, [, value]) => {
+                            const strValue = String(value);
+                            if (strValue.toLowerCase() === 'ت') hasSettlement = true;
+                            const hours = parseFloat(strValue);
+                            return sum + (isNaN(hours) ? 0 : hours);
+                        }, 0);
                     
                     const settlementCodeColor = customCodeMap.get('ت')?.color;
                     const rowStyle = hasSettlement ? { backgroundColor: settlementCodeColor || '#E9D5FF' } : {};

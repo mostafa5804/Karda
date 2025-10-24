@@ -170,16 +170,23 @@ export const useEmployeeStore = create(
             }),
             importAndUpsertData: (projectId, data) => set(state => {
                 const project = state.getProjectData(projectId);
-                const existingEmployees = [...project.employees];
+                let updatedEmployees = [...project.employees];
                 const newAttendance = JSON.parse(JSON.stringify(project.attendance));
                 let newEmployeesAdded = 0;
-
+            
+                const employeesInExcel = new Set<string>();
+            
                 data.forEach(row => {
-                    const existingEmp = existingEmployees.find(e => e.lastName === row.lastName && e.firstName === row.firstName);
+                    const existingEmp = updatedEmployees.find(e => e.lastName === row.lastName && e.firstName === row.firstName);
                     if (existingEmp) {
-                        // Update existing employee
-                        Object.assign(existingEmp, { position: row.position, monthlySalary: row.monthlySalary });
+                        // Update existing employee and ensure they are active
+                        Object.assign(existingEmp, { 
+                            position: row.position, 
+                            monthlySalary: row.monthlySalary, 
+                            isArchived: false 
+                        });
                         newAttendance[existingEmp.id] = { ...(newAttendance[existingEmp.id] || {}), ...row.attendance };
+                        employeesInExcel.add(existingEmp.id);
                     } else {
                         // Add new employee
                         const newEmployeeId = new Date().toISOString() + Math.random() + (newEmployeesAdded++);
@@ -193,15 +200,24 @@ export const useEmployeeStore = create(
                             isArchived: false,
                             documentsFolderName,
                         };
-                        existingEmployees.push(newEmployee);
+                        updatedEmployees.push(newEmployee);
                         newAttendance[newEmployee.id] = row.attendance;
+                        employeesInExcel.add(newEmployee.id);
                     }
                 });
-
+            
+                // Archive any employee who was NOT in the Excel file
+                const finalEmployees = updatedEmployees.map(emp => {
+                    if (!employeesInExcel.has(emp.id)) {
+                        return { ...emp, isArchived: true };
+                    }
+                    return emp;
+                });
+            
                 return {
                     projectData: {
                         ...state.projectData,
-                        [projectId]: { employees: existingEmployees, attendance: newAttendance }
+                        [projectId]: { employees: finalEmployees, attendance: newAttendance }
                     }
                 };
             }),
