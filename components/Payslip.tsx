@@ -17,11 +17,11 @@ const Payslip: React.FC<PayslipProps> = ({ employee, reportData, settings, proje
 
     // --- Calculations ---
     const absenceDeduction = dailyRate * absentDays;
-    const overtimePay = (overtimeHours / 10) * dailyRate; // Assuming 10 hours overtime = 1 day pay
 
     let earnings: { title: string, value: number, note?: string }[] = [];
     
     if (salaryMode === 'official') {
+        const overtimePay = (overtimeHours / 10) * dailyRate;
         const baseDayCount = settings.baseDayCount > 0 ? settings.baseDayCount : 30;
         const baseSalaryProrated = ((employee.baseSalary || 0) / baseDayCount) * effectiveDays;
         const housingAllowanceProrated = ((employee.housingAllowance || 0) / baseDayCount) * effectiveDays;
@@ -36,11 +36,18 @@ const Payslip: React.FC<PayslipProps> = ({ employee, reportData, settings, proje
             { title: 'مبلغ اضافه کاری', value: overtimePay, note: `${overtimeHours} ساعت` },
             { title: 'پاداش', value: bonus },
         ];
-    } else { // Project mode
-        const baseWorkPay = dailyRate * effectiveDays;
+    } else { // Project mode - Updated for clarity
+        const payableDays = effectiveDays + (overtimeHours / 10);
+        const baseWorkPay = dailyRate * payableDays;
+        
+        const calculationNote = `${effectiveDays} روز کارکرد + ${overtimeHours} ساعت اضافه کاری = ${payableDays.toFixed(2)} روز قابل پرداخت`;
+
         earnings = [
-            { title: 'حقوق بر اساس کارکرد', value: baseWorkPay, note: `${effectiveDays} روز` },
-            { title: 'مبلغ اضافه کاری', value: overtimePay, note: `${overtimeHours} ساعت` },
+            { 
+                title: 'حقوق کارکرد', 
+                value: baseWorkPay, 
+                note: calculationNote 
+            },
             { title: 'پاداش', value: bonus },
         ];
     }

@@ -101,7 +101,8 @@ export const generateReport = (
                     }
                 }
             }
-            reportItem.effectiveDays += presenceDays + reportItem.leaveDays + reportItem.sickDays + fridayWorkDays + holidayWorkDays;
+            // MODIFIED: 'leaveDays' is no longer included in the effective days for salary calculation.
+            reportItem.effectiveDays += presenceDays + reportItem.sickDays + fridayWorkDays + holidayWorkDays;
         });
     });
 
