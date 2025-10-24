@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Employee } from '../types';
+import { Employee, CustomAttendanceCode } from '../types';
 import { useAppStore } from '../stores/useAppStore';
 import { useEmployeeStore } from '../stores/useEmployeeStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
@@ -11,6 +11,7 @@ import { formatCurrency } from '../utils/currency';
 import { getDaysInJalaliMonth, getFormattedDate, getFirstDayOfMonthJalali, getCurrentJalaliDate } from '../utils/calendar';
 import IndividualAiAnalysis from './IndividualAiAnalysis';
 import Payslip from './Payslip';
+import { getContrastingTextColor } from '../utils/color';
 
 interface IndividualReportProps {
     employee?: Employee;
@@ -43,6 +44,12 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
         }
         return `گزارش از ${JALALI_MONTHS[from.month - 1]} ${from.year} تا ${JALALI_MONTHS[to.month - 1]} ${to.year}`;
     }, [reportDateFilter]);
+    
+    const customCodeMap = useMemo(() => {
+        const map = new Map<string, CustomAttendanceCode>();
+        settings.customCodes.forEach(code => map.set(code.char.toLowerCase(), code));
+        return map;
+    }, [settings.customCodes]);
 
     const handlePrint = () => {
         const styleId = 'dynamic-print-style';
@@ -93,7 +100,7 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
                 </div>
                 
                 <div className={`print-area payslip-print-area print-${printMode}`}>
-                    {/* This part is visible on screen and print */}
+                    {/* Payslip main content */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-md mb-6">
                         <div><strong className="block text-sm text-gray-500">نام:</strong><span>{employee.lastName} {employee.firstName}</span></div>
                         <div><strong className="block text-sm text-gray-500">سمت:</strong><span>{employee.position}</span></div>
@@ -111,14 +118,55 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
                         />
                     )}
 
-                    {/* These parts are only visible on screen */}
+                    {/* Monthly Attendance Calendar - Visible on screen and in print */}
+                    <div className="mt-8" style={{ pageBreakInside: 'avoid' }}>
+                        <h2 className="text-lg font-semibold mb-2">تقویم کارکرد ({JALALI_MONTHS[selectedMonth - 1]} {selectedYear})</h2>
+                        <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                            {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="p-1"></div>)}
+                            {Array.from({ length: daysInMonth }).map((_, i) => {
+                                const day = i + 1;
+                                const date = getFormattedDate(selectedYear, selectedMonth, day);
+                                const status = attendance[employee.id]?.[date] || '';
+                                
+                                const cellStyle: React.CSSProperties = {};
+                                const customCode = customCodeMap.get(String(status).toLowerCase());
+
+                                if (customCode) {
+                                    cellStyle.backgroundColor = customCode.color;
+                                    cellStyle.color = getContrastingTextColor(customCode.color);
+                                } else {
+                                    const dayOfWeek = (firstDay + i) % 7;
+                                    const override = settings.dayTypeOverrides[date];
+                                    const isFriday = override === 'friday' || (!override && dayOfWeek === 6);
+                                    const isHoliday = override === 'holiday' || (!override && settings.holidays.includes(date));
+                                    
+                                    if (isFriday) {
+                                        const color = settings.customCodes.find(c => c.id === 'system-friday-work')?.color;
+                                        if (color) cellStyle.backgroundColor = color;
+                                    } else if (isHoliday) {
+                                        const color = settings.customCodes.find(c => c.id === 'system-holiday-work')?.color;
+                                        if (color) cellStyle.backgroundColor = color;
+                                    }
+                                }
+
+                                return (
+                                    <div key={day} className="p-1 border rounded" style={cellStyle} title={`${day} ${JALALI_MONTHS[selectedMonth-1]}`}>
+                                        <div className="font-bold">{day}</div>
+                                        <div className="mt-1">{status || '-'}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    
+                    {/* Stats section - Only visible on screen */}
                     <div className="no-print">
                         {reportData && (
                             <div className="stats stats-vertical lg:stats-horizontal shadow w-full my-6">
                                 <div className="stat">
                                     <div className="stat-title">روزهای موثر</div>
                                     <div className="stat-value text-primary">{reportData.effectiveDays}</div>
-                                    <div className="stat-desc">حضور + مرخصی + استعلاجی</div>
+                                    <div className="stat-desc">حضور + استعلاجی</div>
                                 </div>
                                 <div className="stat">
                                     <div className="stat-title">اضافه کاری</div>
@@ -137,22 +185,6 @@ const IndividualReport: React.FC<IndividualReportProps> = ({ employee, projectId
                                 </div>
                             </div>
                         )}
-
-                        <h2 className="text-lg font-semibold mb-2 mt-6">تقویم کارکرد (ماه اول بازه)</h2>
-                        <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                            {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} className="p-1"></div>)}
-                            {Array.from({ length: daysInMonth }).map((_, i) => {
-                                const day = i + 1;
-                                const date = getFormattedDate(selectedYear, selectedMonth, day);
-                                const status = attendance[employee.id]?.[date] || '';
-                                return (
-                                    <div key={day} className="p-1 border rounded" title={`${day} ${JALALI_MONTHS[selectedMonth-1]}`}>
-                                        <div className="font-bold">{day}</div>
-                                        <div className="mt-1">{status || '-'}</div>
-                                    </div>
-                                );
-                            })}
-                        </div>
                     </div>
                 </div>
             </div>
