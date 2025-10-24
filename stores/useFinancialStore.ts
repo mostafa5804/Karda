@@ -33,20 +33,14 @@ export const useFinancialStore = create(
                 if (!updatedData.bonus) delete updatedData.bonus;
                 if (!updatedData.deduction) delete updatedData.deduction;
 
-                const newProjectFinancials = {
-                    ...state.projectFinancials,
-                    [projectId]: {
-                        ...(state.projectFinancials[projectId] || {}),
-                        [employeeId]: {
-                            ...(state.projectFinancials[projectId]?.[employeeId] || {}),
-                            [year]: {
-                                ...(state.projectFinancials[projectId]?.[employeeId]?.[year] || {}),
-                                [month]: updatedData
-                            }
-                        }
-                    }
-                };
+                const newProjectFinancials = JSON.parse(JSON.stringify(state.projectFinancials));
+
+                if (!newProjectFinancials[projectId]) newProjectFinancials[projectId] = {};
+                if (!newProjectFinancials[projectId][employeeId]) newProjectFinancials[projectId][employeeId] = {};
+                if (!newProjectFinancials[projectId][employeeId][year]) newProjectFinancials[projectId][employeeId][year] = {};
                 
+                newProjectFinancials[projectId][employeeId][year][month] = updatedData;
+
                 // Cleanup empty month/year/employee objects if they have no keys
                 if (Object.keys(newProjectFinancials[projectId][employeeId][year][month]).length === 0) {
                     delete newProjectFinancials[projectId][employeeId][year][month];
@@ -56,6 +50,9 @@ export const useFinancialStore = create(
                 }
                 if (Object.keys(newProjectFinancials[projectId][employeeId]).length === 0) {
                     delete newProjectFinancials[projectId][employeeId];
+                }
+                 if (Object.keys(newProjectFinancials[projectId]).length === 0) {
+                    delete newProjectFinancials[projectId];
                 }
 
                 return { projectFinancials: newProjectFinancials };

@@ -12,6 +12,8 @@ import NoteEditorModal from './NoteEditorModal';
 import { getContrastingTextColor } from '../utils/color';
 import ManageActiveEmployeesModal from './ManageActiveEmployeesModal';
 import { useToastStore } from '../stores/useToastStore';
+import { useSortableTable } from '../hooks/useSortableTable';
+import SortableTableHeader from './SortableTableHeader';
 
 const AttendanceTable: React.FC = () => {
     const { selectedYear, selectedMonth, currentProjectId } = useAppStore();
@@ -24,7 +26,8 @@ const AttendanceTable: React.FC = () => {
     const { employees, attendance } = getProjectData(projectId);
     const settings = getSettings(projectId);
 
-    const activeEmployees = useMemo(() => employees.filter(e => !e.isArchived).sort((a,b) => a.lastName.localeCompare(b.lastName)), [employees]);
+    const activeEmployees = useMemo(() => employees.filter(e => !e.isArchived), [employees]);
+    const { items: sortedEmployees, requestSort, sortConfig } = useSortableTable(activeEmployees, { key: 'lastName', direction: 'asc' });
 
     const daysInMonth = getDaysInJalaliMonth(selectedYear, selectedMonth);
     const firstDay = getFirstDayOfMonthJalali(selectedYear, selectedMonth);
@@ -124,7 +127,7 @@ const AttendanceTable: React.FC = () => {
     };
 
     const renderBody = () => {
-        return activeEmployees.map((employee, index) => {
+        return sortedEmployees.map((employee, index) => {
             const settlementDateInMonth = employee.settlementDate && employee.settlementDate.startsWith(`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`);
             const rowClass = settlementDateInMonth ? 'bg-purple-50' : 'hover:bg-gray-50';
 
@@ -200,8 +203,22 @@ const AttendanceTable: React.FC = () => {
                 <thead className="sticky top-0 z-20">
                     <tr>
                         <th className="p-2 border border-gray-300 text-center sticky left-0 z-30 bg-gray-200 w-[45px]">#</th>
-                        <th className="p-2 border border-gray-300 sticky left-[45px] z-30 bg-gray-200 min-w-[120px]">نام خانوادگی</th>
-                        <th className="p-2 border border-gray-300 sticky left-[175px] z-30 bg-gray-200 min-w-[100px]">نام</th>
+                        <SortableTableHeader<Employee>
+                            sortKey="lastName"
+                            sortConfig={sortConfig}
+                            requestSort={requestSort}
+                            className="p-2 border border-gray-300 sticky left-[45px] z-30 bg-gray-200 min-w-[120px]"
+                        >
+                            نام خانوادگی
+                        </SortableTableHeader>
+                         <SortableTableHeader<Employee>
+                            sortKey="firstName"
+                            sortConfig={sortConfig}
+                            requestSort={requestSort}
+                            className="p-2 border border-gray-300 sticky left-[175px] z-30 bg-gray-200 min-w-[100px]"
+                        >
+                            نام
+                        </SortableTableHeader>
                         <th className="p-2 border border-gray-300 sticky left-[285px] z-30 bg-gray-200 min-w-[120px]">سمت</th>
                         {renderHeader()}
                     </tr>

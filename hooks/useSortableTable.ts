@@ -17,6 +17,12 @@ export const useSortableTable = <T extends object>(
                 if (aVal === null || aVal === undefined) return 1;
                 if (bVal === null || bVal === undefined) return -1;
                 
+                if (typeof aVal === 'string' && typeof bVal === 'string') {
+                    return sortConfig.direction === 'asc'
+                        ? aVal.localeCompare(bVal, 'fa')
+                        : bVal.localeCompare(aVal, 'fa');
+                }
+
                 if (aVal < bVal) {
                     return sortConfig.direction === 'asc' ? -1 : 1;
                 }

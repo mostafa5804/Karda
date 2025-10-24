@@ -13,6 +13,7 @@ import AttendanceSummaryReport from './AttendanceSummaryReport';
 import AttendanceListReport from './AttendanceListReport';
 import IndividualReport from './IndividualReport';
 import { ReportDateFilter, ReportView } from '../types';
+import EditableCell from './EditableCell';
 
 const currentJalaliYear = new Date().toLocaleDateString('fa-IR-u-nu-latn').split('/')[0];
 const years = Array.from({ length: 10 }, (_, i) => parseInt(currentJalaliYear) - i);
@@ -61,7 +62,7 @@ const Reports: React.FC = () => {
     const { getProjectData } = useEmployeeStore();
     const { getSettings } = useSettingsStore();
     const { projects } = useCompanyStore();
-    const { projectFinancials } = useFinancialStore();
+    const { projectFinancials, updateFinancials } = useFinancialStore();
 
     const projectId = currentProjectId || 'default';
     const currentProject = projects.find(p => p.id === projectId);
@@ -180,6 +181,13 @@ const Reports: React.FC = () => {
         }
         setReportView(newView);
     };
+
+    const handleFinancialsUpdate = (employeeId: string, field: 'advance' | 'bonus' | 'deduction', value: string) => {
+        // This is only allowed for single month view
+        const { from: { year, month } } = reportDateFilter;
+        const numericValue = parseFloat(value) || 0;
+        updateFinancials(projectId, employeeId, year, month, { [field]: numericValue });
+    };
     
     const reportTitle = useMemo(() => {
         const { mode, from, to } = reportDateFilter;
@@ -235,9 +243,33 @@ const Reports: React.FC = () => {
                                             <td className="p-3">{item.leaveDays}</td>
                                             <td className="p-3">{item.sickDays}</td>
                                             <td className="p-3 font-bold text-purple-600">{item.overtimeHours}</td>
-                                            <td className="p-3 text-orange-600">{formatCurrency(item.advance, settings.currency)}</td>
-                                            <td className="p-3 text-green-600">{formatCurrency(item.bonus, settings.currency)}</td>
-                                            <td className="p-3 text-red-600">{formatCurrency(item.deduction, settings.currency)}</td>
+                                            <td className="p-0 text-orange-600">
+                                                 <EditableCell
+                                                    value={item.advance || 0}
+                                                    onSave={(newValue) => handleFinancialsUpdate(item.employeeId, 'advance', String(newValue))}
+                                                    type="number"
+                                                    disabled={reportDateFilter.mode !== 'month'}
+                                                    displayFormatter={(v) => formatCurrency(Number(v), settings.currency)}
+                                                />
+                                            </td>
+                                            <td className="p-0 text-green-600">
+                                                 <EditableCell
+                                                    value={item.bonus || 0}
+                                                    onSave={(newValue) => handleFinancialsUpdate(item.employeeId, 'bonus', String(newValue))}
+                                                    type="number"
+                                                    disabled={reportDateFilter.mode !== 'month'}
+                                                    displayFormatter={(v) => formatCurrency(Number(v), settings.currency)}
+                                                />
+                                            </td>
+                                            <td className="p-0 text-red-600">
+                                                 <EditableCell
+                                                    value={item.deduction || 0}
+                                                    onSave={(newValue) => handleFinancialsUpdate(item.employeeId, 'deduction', String(newValue))}
+                                                    type="number"
+                                                    disabled={reportDateFilter.mode !== 'month'}
+                                                    displayFormatter={(v) => formatCurrency(Number(v), settings.currency)}
+                                                />
+                                            </td>
                                             <td className="p-3 font-bold">{formatCurrency(item.totalPay, settings.currency)}</td>
                                         </tr>
                                     ))}

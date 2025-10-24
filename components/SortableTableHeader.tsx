@@ -31,7 +31,7 @@ const SortableTableHeader = <T extends object>({
             onClick={() => requestSort(sortKey)}
         >
             {children}
-            <span className={`ml-2 ${isSorted && sortConfig?.direction ? 'text-blue-500' : 'text-gray-400'}`}>
+            <span className={`ml-2 ${isSorted && sortConfig?.direction ? 'text-primary' : 'text-base-content/40'}`}>
                 {isSorted ? getSortIcon(sortConfig.direction) : '↕'}
             </span>
         </th>
